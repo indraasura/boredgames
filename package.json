@@ -1,0 +1,15 @@
+{
+  "name": "boredgames",
+  "private": true,
+  "packageManager": "pnpm@10.17.0",
+  "scripts": {
+    "dev": "pnpm --filter @boredgames/web dev",
+    "build": "pnpm --filter @boredgames/web build",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

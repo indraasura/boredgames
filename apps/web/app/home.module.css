@@ -1,0 +1,305 @@
+.nav {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.header {
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+.links {
+  display: flex;
+  gap: 4px;
+}
+.link {
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--ink);
+  color: var(--bg);
+  transition: background 0.15s ease;
+}
+.pill:hover {
+  background: #2a2a28;
+}
+.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  font-weight: 500;
+}
+.ghost:hover {
+  background: #ededea;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.hero {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 96px 24px 72px;
+}
+.h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(56px, 9vw, 128px);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  margin: 28px 0 0;
+  max-width: 11ch;
+}
+.heroRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 40px;
+}
+.lede {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 520px;
+}
+
+.section {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 24px 96px;
+}
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-top: 1px solid var(--ink);
+  padding-top: 16px;
+  margin-bottom: 24px;
+}
+.h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.shelf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.card {
+  flex: 1 1 300px;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 1px 0 var(--line),
+    0 18px 40px -18px rgba(10, 10, 10, 0.25);
+}
+.featured {
+  flex-basis: 100%;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.art {
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.featured .art {
+  flex: 1 1 520px;
+  height: auto;
+  min-height: 340px;
+}
+.cardBody {
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+.featured .cardBody {
+  flex: 1 1 340px;
+  padding: 28px;
+  gap: 14px;
+}
+.cardTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.cardTitle h3 {
+  margin: 0;
+  font-size: 28px;
+}
+.desc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.cta {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--bg);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  min-height: 48px;
+}
+.soon {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed #c9c9c3;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 15px;
+  min-height: 48px;
+}
+
+/* Milestones island art */
+.sky {
+  background: linear-gradient(180deg, #bfe3f2 0%, #dff0f1 55%, #fbefdd 100%);
+}
+.sea {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  width: 440px;
+  height: 190px;
+  margin: -95px 0 0 -220px;
+  border-radius: 50%;
+  background: #9ed6e4;
+}
+.land {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 380px;
+  height: 160px;
+  margin: -80px 0 0 -190px;
+  border-radius: 50%;
+  background: #b7de9c;
+  box-shadow:
+    0 10px 0 #ebd3a6,
+    0 22px 30px -10px rgba(40, 70, 80, 0.45);
+}
+.dot {
+  position: absolute;
+  width: 16px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
+}
+.tree {
+  position: absolute;
+  width: 14px;
+  height: 22px;
+  border-radius: 7px 7px 3px 3px;
+}
+.badge {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+}
+.step {
+  flex: 1 1 300px;
+  padding: 28px 28px 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.step h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.step p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.footer {
+  border-top: 1px solid var(--line);
+}
+.footerIn {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 28px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}

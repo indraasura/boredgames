@@ -1,0 +1,64 @@
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --ink: #0a0a0a;
+  --ink-2: #3d3d3a;
+  --muted: #5c5c57;
+  --line: #e4e4e0;
+  --line-strong: #d6d6d1;
+  --hover: #ededea;
+  --radius-sm: 12px;
+  --radius: 20px;
+  --radius-lg: 24px;
+  --max: 1200px;
+
+  --font-ui: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-inter-tight), var(--font-inter), sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
