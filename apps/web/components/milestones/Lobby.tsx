@@ -35,12 +35,14 @@ export default function Lobby({
   initialLevel,
   onStart,
   onFriends,
+  onJoin,
 }: {
   initialMap: string;
   initialBots: number;
   initialLevel: BotLevel;
   onStart(config: Omit<Session, "seed" | "fast">): void;
   onFriends(map: string): void;
+  onJoin(): void;
 }) {
   const prefs = useSyncExternalStore(audio.subscribe, audio.getPrefs, audio.getPrefs);
   const [map, setMap] = useState(initialMap);
@@ -156,7 +158,10 @@ export default function Lobby({
               onFriends(selected.id);
             }}
           >
-            Play with friends
+            Host friends
+          </button>
+          <button type="button" className={s.friends} style={{ marginLeft: 0 }} onClick={onJoin}>
+            Join with code
           </button>
           <button
             type="button"

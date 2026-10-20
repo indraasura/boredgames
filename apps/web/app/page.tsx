@@ -92,7 +92,7 @@ export default function Home() {
         <section id="shelf" className={s.section}>
           <div className={s.sectionHead}>
             <h2 className={s.h2}>Games</h2>
-            <span className="mono">1 playable, 3 coming</span>
+            <span className="mono">2 playable, 3 coming</span>
           </div>
 
           <div className={s.shelf}>
@@ -123,10 +123,37 @@ export default function Home() {
                 </p>
                 <div className={s.tags}>
                   <span className={s.tag}>vs Computer</span>
-                  <span className={s.tag}>Friends by invite link</span>
+                  <span className={s.tag}>Friends by room code</span>
                   <span className={s.tag}>About 20 minutes</span>
                 </div>
                 <Link href="/games/milestones" className={s.cta}>
+                  <span>Play</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </article>
+
+            <article className={s.card}>
+              <div className={s.art} aria-hidden="true">
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#0d0f13,#1b1f27)" }}>
+                  <svg viewBox="0 0 200 120" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+                    <path d="M40 90 C 30 50, 70 30, 100 40 S 170 30, 165 70 S 120 100, 90 85 S 55 105, 40 90Z" fill="none" stroke="#f2f4f8" strokeWidth="7" strokeLinejoin="round" />
+                    <path d="M40 90 C 30 50, 70 30, 100 40 S 170 30, 165 70 S 120 100, 90 85 S 55 105, 40 90Z" fill="none" stroke="#ff3b30" strokeWidth="1.6" strokeDasharray="5 7" />
+                  </svg>
+                </div>
+              </div>
+              <div className={s.cardBody}>
+                <div className={s.cardTitle}>
+                  <h3 style={{ fontFamily: "var(--font-inter-tight)", fontWeight: 800, color: "#0a0a0a" }}>Grand Prix</h3>
+                  <span className="mono">1–20 cars</span>
+                </div>
+                <p className={s.desc}>Drive 40 real circuits with real car physics. Choose tyres, tune the setup, pick the weather. Free ride, race the computer, or race friends.</p>
+                <div className={s.tags}>
+                  <span className={s.tag}>Free ride</span>
+                  <span className={s.tag}>vs Computer</span>
+                  <span className={s.tag}>Friends by room code</span>
+                </div>
+                <Link href="/games/f1" className={s.cta}>
                   <span>Play</span>
                   <span aria-hidden="true">→</span>
                 </Link>
@@ -185,7 +212,7 @@ export default function Home() {
           <div className={s.steps}>
             <div className={s.step}>
               <h3>No account</h3>
-              <p>There is nothing to sign up for and no server to talk to. The site is just files.</p>
+              <p>There is nothing to sign up for and we run no server. The site is just files. Playing with friends uses a free public service only to introduce your browsers to each other.</p>
             </div>
             <div className={s.step}>
               <h3>Nothing saved</h3>
@@ -193,7 +220,7 @@ export default function Home() {
             </div>
             <div className={s.step}>
               <h3>Play anyone</h3>
-              <p>Games run in your browser against computer players, so they start straight away. Friends join by invite link, directly browser to browser.</p>
+              <p>Games run in your browser against computer players, so they start straight away. Friends join with a 6 digit room code, directly browser to browser.</p>
             </div>
           </div>
         </section>

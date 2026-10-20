@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@boredgames/engine": "workspace:*",
+    "@boredgames/f1": "workspace:*",
     "@boredgames/milestones": "workspace:*",
     "next": "^16.4.2",
+    "peerjs": "^1.5.5",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "three": "^0.186.1"

@@ -19,9 +19,12 @@ Consequences:
 
 ## Playing with friends
 
-No signalling server: the invite link carries the WebRTC offer (compressed, in the URL hash) and the friend sends back an answer code. The host runs the computer players and relays moves; every browser applies the same moves to the same seeded game, so state stays identical. The only outside service is a public STUN server (Google) so browsers behind home routers can find each other. Connections that need a relay (strict corporate networks) will fail. Code: `apps/web/lib/milestones/net.ts`.
+The host opens a room and gets a 6 digit code; friends type it to join. Game data goes browser to browser over WebRTC. We run no server, but two free public services help: the PeerJS broker (introduces the two browsers by room code, never sees game traffic) and a public STUN server (Google, for finding a route through home routers). If either is down, rooms cannot be opened. Connections that need a relay (strict corporate networks) will fail. Code: `apps/web/lib/p2p.ts`; per-game messages in `lib/milestones/net.ts` and `lib/f1/net.ts`.
+
+Milestones: the host runs the computer players and relays moves; every browser applies the same moves to the same seeded game. Grand Prix: every browser simulates its own car and streams it; the host runs the computer cars.
 
 ## Games
 
 - **Milestones** (done): spin, drive a 3D map, a few choices, retire richest. 4 maps, 3 bot skill levels, synthesised sound.
+- **Grand Prix** (done): real-time racing on 40 circuits; physics and race rules in `packages/f1`, 3D in `apps/web/lib/f1`. Friends connect browser to browser; each browser simulates its own car and streams it, the host runs the computer cars.
 - **Mancala**, **Pachisi**, **Depth Charge**: not started. Each is a new `packages/<game>` plus a route.

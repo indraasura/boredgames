@@ -5,16 +5,17 @@ import type { BotLevel } from "@boredgames/engine";
 import { DEFAULT_MAP, getMap } from "@boredgames/milestones";
 import { audio } from "@/lib/milestones/audio";
 import { MilestonesController, type Seat } from "@/lib/milestones/controller";
-import { HostNet, type GuestNet, type Net, type SeatInfo } from "@/lib/milestones/net";
+import { GuestNet, HostNet, type Net, type SeatInfo } from "@/lib/milestones/net";
 import { WorldScene, type HoverInfo } from "@/lib/milestones/scene/WorldScene";
 import { THEMES } from "@/lib/milestones/scene/themes";
 import { Players, Spinner, StatusLine, TileGuide, TileTip, TitleBlock, ToastView } from "./Hud";
-import Join from "./Join";
 import Lobby, { type Session } from "./Lobby";
 import Room, { type Guest } from "./Room";
 import { ChoiceSheet, ResultsDialog } from "./Sheets";
+import { JoinFlow } from "../shared/Invite";
+import r from "../shared/invite.module.css";
+import l from "./lobby.module.css";
 import m from "./milestones.module.css";
-import r from "./room.module.css";
 
 const CAR_COLORS = ["#E86F51", "#4F7CC3", "#3DA774", "#9B6BD6"];
 const BOT_NAMES = ["Mira", "Otto", "Juno"];
@@ -38,27 +39,24 @@ function soloSeats(bots: number, level: BotLevel): Seat[] {
   ];
 }
 
-/** URL options, handy for demos and tests: ?map=&bots=&skill=&seed=&fast=1. An invite link is #join=code. */
+/** URL options, handy for demos and tests: ?map=&bots=&skill=&seed=&fast=1. */
 function readQuery() {
   const q = new URLSearchParams(window.location.search);
   const skill = q.get("skill");
-  const hash = new URLSearchParams(window.location.hash.slice(1));
   return {
     map: q.get("map"),
     bots: Math.max(1, Math.min(3, Number(q.get("bots")) || 1)),
     skill: (skill === "easy" || skill === "medium" || skill === "hard" ? skill : "hard") as BotLevel,
     seed: q.has("seed") ? Number(q.get("seed")) >>> 0 : null,
     fast: q.get("fast") === "1",
-    invite: hash.get("join"),
   };
 }
 
-type Screen = { k: "lobby" } | { k: "room"; map: string } | { k: "join"; invite: string } | { k: "play"; match: Match };
+type Screen = { k: "lobby" } | { k: "room"; map: string } | { k: "join" } | { k: "play"; match: Match };
 
 export default function MilestonesGame() {
   const [query] = useState(readQuery);
   const [screen, setScreen] = useState<Screen>(() => {
-    if (query.invite) return { k: "join", invite: query.invite };
     if (!query.map) return { k: "lobby" };
     const def = getMap(query.map);
     return { k: "play", match: { map: def.id, seats: soloSeats(query.bots, query.skill), seed: query.seed ?? newSeed(), fast: query.fast, nonce: 1, net: null } };
@@ -71,17 +69,31 @@ export default function MilestonesGame() {
 
   const toLobby = useCallback(() => {
     audio.startMusic("menu");
-    if (window.location.hash) window.history.replaceState(null, "", window.location.pathname + window.location.search);
     setScreen({ k: "lobby" });
   }, []);
 
   if (screen.k === "join") {
     return (
-      <Join
-        invite={screen.invite}
-        onBack={toLobby}
-        onStart={(net: GuestNet, start) => play({ map: start.map, seats: start.seats, seed: start.seed, fast: start.fast, net })}
-      />
+      <div className={l.lobby}>
+        <div className={l.inner}>
+          <header className={l.head}>
+            <button type="button" className={l.back} onClick={toLobby}>
+              ← Back
+            </button>
+            <div className={l.titles}>
+              <h1 className={l.title}>Join a game</h1>
+            </div>
+          </header>
+          <JoinFlow
+            build={(link) => new GuestNet(link)}
+            isStart={(msg) => msg.t === "start"}
+            onBack={toLobby}
+            onStart={(net, start) => {
+              if (start.t === "start") play({ map: start.map, seats: start.seats, seed: start.seed, fast: start.fast, net });
+            }}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -91,13 +103,13 @@ export default function MilestonesGame() {
       <Room
         mapName={def.name}
         onBack={toLobby}
-        onStart={({ name, guests, bots, level }: { name: string; guests: Guest[]; bots: number; level: BotLevel }) => {
+        onStart={({ name, guests, room, bots, level }: { name: string; guests: Guest[]; room: { close(): void } | null; bots: number; level: BotLevel }) => {
           const seats: Seat[] = [
             { id: "p0", name, color: CAR_COLORS[0]! },
             ...guests.map((g, i) => ({ id: `p${i + 1}`, name: g.name, color: CAR_COLORS[i + 1]! })),
             ...Array.from({ length: bots }, (_, i) => ({ id: `bot-${i + 1}`, name: BOT_NAMES[i]!, color: CAR_COLORS[guests.length + i + 1]!, bot: level })),
           ];
-          const net = new HostNet(guests.map((g, i) => ({ id: `p${i + 1}`, name: g.name, link: g.link })));
+          const net = new HostNet(guests.map((g, i) => ({ id: `p${i + 1}`, name: g.name, link: g.link })), room ?? undefined);
           const seed = newSeed();
           const info: SeatInfo[] = seats.map((s) => ({ ...s }));
           guests.forEach((g, i) => g.link.send({ t: "start", seats: info, map: def.id, seed, you: `p${i + 1}`, fast: query.fast }));
@@ -114,6 +126,7 @@ export default function MilestonesGame() {
         initialBots={1}
         initialLevel="hard"
         onFriends={(map) => setScreen({ k: "room", map })}
+        onJoin={() => setScreen({ k: "join" })}
         onStart={(cfg: Omit<Session, "seed" | "fast">) => play({ map: cfg.map, seats: soloSeats(cfg.bots, cfg.level), seed: newSeed(), fast: query.fast, net: null })}
       />
     );
