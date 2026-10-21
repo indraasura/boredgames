@@ -6,6 +6,7 @@ import {
   CROWNS,
   CROWNS_ALLIANCE,
   CROWNS_SOLO,
+  DECREE_INFO,
   DEFAULT_ROUNDS,
   GRUDGE_ROUNDS,
   HOUSES,
@@ -23,7 +24,7 @@ import {
   subArmy,
   validArmy,
 } from "./realm";
-import type { Army, BannersConfig, BannersState, BattleRound, Move, PlayerState, Province, Season, Tiding, Unit } from "./types";
+import type { Army, BannersConfig, BannersState, BattleRound, DecreeKind, Move, PlayerState, Province, Season, Tiding, Unit } from "./types";
 import { SEASONS } from "./types";
 
 const clone = <T>(x: T): T => structuredClone(x);
@@ -46,7 +47,7 @@ export function setup(ctx: { players: { id: PlayerId; name: string }[]; config: 
     const cap = provinceByName(house.capital).id;
     provinces[cap] = { owner: pl.id, army: { foot: 3, archers: 1, knights: 1 }, tired: emptyArmy(), castle: true };
     for (const h of house.home) provinces[provinceByName(h).id] = { owner: pl.id, army: { foot: 1, archers: 0, knights: 0 }, tired: emptyArmy(), castle: false };
-    return { id: pl.id, name: pl.name, house: house.id, gold: START_GOLD, capital: cap, alive: true, ally: null, allySince: 0, prestige: 0, grudges: [] };
+    return { id: pl.id, name: pl.name, house: house.id, gold: START_GOLD, capital: cap, alive: true, ally: null, allySince: 0, prestige: 0, grudges: [], decree: null };
   });
   const s: BannersState = {
     players,
@@ -64,6 +65,7 @@ export function setup(ctx: { players: { id: PlayerId; name: string }[]; config: 
     winners: null,
     winReason: null,
   };
+  assignDecrees(s);
   // The first turn's income is collected here; later turns collect it as they begin.
   collect(s, []);
   return s;
@@ -208,12 +210,14 @@ export function apply(state: BannersState, player: PlayerId, m: Move): { state: 
       p.tired[m.unit] += count;
       s.mustered[m.at]! += count;
       ev.push({ type: "recruit", player: me.id, at: m.at, unit: m.unit, count });
+      if (s.mustered.reduce((a, b) => a + b, 0) >= 3) fulfil(s, me, "muster", ev);
       break;
     }
     case "castle": {
       me.gold -= CASTLE_COST;
       s.provinces[m.at]!.castle = true;
       ev.push({ type: "castle", player: me.id, at: m.at });
+      fulfil(s, me, "castle", ev);
       break;
     }
     case "march":
@@ -291,6 +295,7 @@ function march(s: BannersState, me: PlayerState, m: Extract<Move, { type: "march
     to.army = emptyArmy();
     to.tired = result.attacker;
     afterCapture(s, me, m.to, prev, ev);
+    if (m.army.knights > 0) fulfil(s, me, "knights", ev);
   } else {
     // The defenders who are left hold; the attackers who are left fall back, too tired to march again.
     const split = takeFrom(to.army, to.tired, result.defender);
@@ -313,6 +318,11 @@ function takeFrom(ready: Army, tired: Army, survivors: Army): { ready: Army; tir
 }
 
 function afterCapture(s: BannersState, me: PlayerState, at: number, prev: string | null, ev: GameEvent[]) {
+  fulfil(s, me, "conquer", ev);
+  if (PROVINCES[at]!.crown) {
+    ev.push({ type: "crownTaken", player: me.id, at, crowns: crownsOf(s, me.id) });
+    fulfil(s, me, "crown", ev);
+  }
   const loser = playerById(s, prev);
   if (!loser) return;
   if (loser.capital === at) {
@@ -467,7 +477,39 @@ function endRound(s: BannersState, ev: GameEvent[]) {
   }
   if (t === "storms") s.tidingAt = Math.floor(r.next() * PROVINCES.length);
   save();
+  assignDecrees(s);
   ev.push({ type: "round", round: s.round, season: seasonOf(s.round), tiding: t, at: s.tidingAt });
+}
+
+/** Each living house gets a decree for the new round, suited to where it stands. */
+function assignDecrees(s: BannersState) {
+  const { r, save } = wrap(s);
+  for (const p of s.players) {
+    if (!p.alive) {
+      p.decree = null;
+      continue;
+    }
+    const mine = provincesOf(s, p.id);
+    const crownNear = CROWNS.some((c) => {
+      const o = s.provinces[c]!.owner;
+      return o !== p.id && !allied(s, o, p.id) && mine.some((i) => PROVINCES[i]!.adj.includes(c));
+    });
+    const pool: DecreeKind[] = ["conquer", "conquer", "knights", "muster"];
+    if (crownNear) pool.push("crown", "crown");
+    if (p.gold >= CASTLE_COST) pool.push("castle");
+    const kind = pool[Math.floor(r.next() * pool.length)]!;
+    p.decree = { kind, reward: DECREE_INFO[kind].reward, done: false };
+  }
+  save();
+}
+
+/** Complete a house's decree, if this is what it asked for. */
+function fulfil(s: BannersState, me: PlayerState, kind: DecreeKind, ev: GameEvent[]) {
+  const d = me.decree;
+  if (!d || d.done || d.kind !== kind) return;
+  d.done = true;
+  me.gold += d.reward;
+  ev.push({ type: "decree", player: me.id, kind, reward: d.reward });
 }
 
 function finish(s: BannersState, winners: string[], reason: string, ev: GameEvent[]) {

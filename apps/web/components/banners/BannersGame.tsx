@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { BotLevel } from "@boredgames/engine";
-import { CROWNS_ALLIANCE, CROWNS_SOLO, HOUSES, PROVINCES, SEATING, allied, banners, current, emptyArmy, seasonOf, size, type Army, type HouseId } from "@boredgames/banners";
+import { Rng, type BotLevel } from "@boredgames/engine";
+import { CROWNS_ALLIANCE, CROWNS_SOLO, HOUSES, PROVINCES, SEATING, allied, banners, current, emptyArmy, seasonOf, size, winChance, type Army, type HouseId } from "@boredgames/banners";
 import { audio } from "@/lib/banners/audio";
 import { BannersController, type Seat } from "@/lib/banners/controller";
 import { GuestNet, HostNet, webrtcSupported, type Msg, type Net, type SeatInfo } from "@/lib/banners/net";
 import { FriendSlots, JoinFlow, type SlotsHandle } from "../shared/Invite";
 import invite from "../shared/invite.module.css";
 import { Shield } from "./Heraldry";
-import { BattleCard, Chronicle, Herald, Letter, Rules, SidePanel, TopBar, Victory } from "./Panels";
+import { BattleCard, Chronicle, Herald, Letter, Rules, SidePanel, Toast, TopBar, Victory } from "./Panels";
+import { Coach, TUTORIAL_SEED, tutored } from "./Tutorial";
 import { WarMap } from "./WarMap";
 import s from "./banners.module.css";
 
@@ -24,16 +25,29 @@ interface Match {
   localId: string;
   nonce: number;
   fast: boolean;
+  tutorial?: boolean;
 }
 
 type Screen = { k: "lobby" } | { k: "join" } | { k: "play"; match: Match };
 
 const newSeed = () => (Math.random() * 2 ** 32) >>> 0;
 
+/** House Varn against two timid lords: the war the tutorial walks you through. */
+const tutorialMatch = (): Omit<Match, "nonce"> => ({
+  seats: SEATING[3]!.map((h, i) => ({ id: `p${i}`, name: i === 0 ? "You" : NAMES[i]!, house: h, bot: i === 0 ? undefined : ("easy" as const) })),
+  seed: TUTORIAL_SEED,
+  rounds: 12,
+  net: null,
+  localId: "p0",
+  fast: false,
+  tutorial: true,
+});
+
 export default function BannersGame() {
   const [screen, setScreen] = useState<Screen>(() => {
     // ?houses=4&skill=hard&fast=1 jumps straight into a war against the computer, for demos and tests.
     const q = new URLSearchParams(window.location.search);
+    if (q.get("tutorial") === "1") return { k: "play", match: { ...tutorialMatch(), nonce: 1 } };
     if (q.has("houses")) {
       const n = Math.max(2, Math.min(4, Number(q.get("houses")) || 3));
       const skill = (q.get("skill") as BotLevel) || "medium";
@@ -46,7 +60,7 @@ export default function BannersGame() {
   const play = useCallback((m: Omit<Match, "nonce">) => setScreen({ k: "play", match: { ...m, nonce: ++nonce.current } }), []);
   const toLobby = useCallback(() => setScreen({ k: "lobby" }), []);
 
-  if (screen.k === "lobby") return <Lobby onPlay={play} onJoin={() => setScreen({ k: "join" })} />;
+  if (screen.k === "lobby") return <Lobby onPlay={play} onJoin={() => setScreen({ k: "join" })} onLearn={() => play(tutorialMatch())} />;
   if (screen.k === "join") {
     return (
       <div className={s.page}>
@@ -85,7 +99,7 @@ export default function BannersGame() {
       onAgain={
         screen.match.net
           ? undefined
-          : () => play({ ...screen.match, seed: newSeed() })
+          : () => play({ ...screen.match, seed: newSeed(), tutorial: false })
       }
     />
   );
@@ -93,7 +107,8 @@ export default function BannersGame() {
 
 // ------------------------------------------------------------------ lobby
 
-function Lobby({ onPlay, onJoin }: { onPlay(m: Omit<Match, "nonce">): void; onJoin(): void }) {
+function Lobby({ onPlay, onJoin, onLearn }: { onPlay(m: Omit<Match, "nonce">): void; onJoin(): void; onLearn(): void }) {
+  const [fresh] = useState(() => !tutored());
   const [count, setCount] = useState(4);
   const [mine, setMine] = useState<HouseId>("varn");
   const [skill, setSkill] = useState<BotLevel>("medium");
@@ -154,6 +169,13 @@ function Lobby({ onPlay, onJoin }: { onPlay(m: Omit<Match, "nonce">): void; onJo
             </h1>
             <p className={s.subtitle}>Raise an army. Swear oaths, and break them. Take the crowns of the realm.</p>
           </div>
+          {fresh && (
+            <div className={s.actions} style={{ marginTop: 18 }}>
+              <button type="button" className={`${s.plain} ${s.learn}`} onClick={() => (audio.unlock(), audio.sfx("fanfare"), onLearn())}>
+                New here? Learn to play · 2 min
+              </button>
+            </div>
+          )}
           <div className={s.rule} />
 
           <div className={s.options}>
@@ -233,6 +255,11 @@ function Lobby({ onPlay, onJoin }: { onPlay(m: Omit<Match, "nonce">): void; onJo
                 Join with code
               </button>
             )}
+            {!fresh && (
+              <button type="button" className={s.plain} onClick={() => (audio.unlock(), onLearn())}>
+                Tutorial
+              </button>
+            )}
           </div>
 
           <div className={s.howto}>
@@ -276,6 +303,7 @@ function War({ match, onLeave, onAgain }: { match: Match; onLeave(): void; onAga
   const [music, setMusic] = useState(audio.music);
   const [sfx, setSfx] = useState(audio.sfxOn);
   const [lost, setLost] = useState(false);
+  const [focus, setFocus] = useState<{ at: number | null; pulse: "raise" | "end" | "march" | null | undefined }>({ at: null, pulse: null });
   const g = view.game;
   const myTurn = g.phase === "play" && current(g).id === view.localId && !view.busy;
 
@@ -331,6 +359,19 @@ function War({ match, onLeave, onAgain }: { match: Match; onLeave(): void; onAga
     return { targets: t, vias: v };
   }, [myTurn, selected, army, g, view.localId]);
 
+  // The chance of winning each attack, the same every time for the same armies.
+  const odds = useMemo(() => {
+    const o = new Map<number, number>();
+    if (selected === null) return o;
+    const rng = new Rng(9001);
+    for (const j of targets) {
+      const owner = g.provinces[j]!.owner;
+      if (owner === view.localId) continue;
+      o.set(j, winChance(g, view.localId, j, army, () => rng.next(), 160));
+    }
+    return o;
+  }, [targets, selected, army, g, view.localId]);
+
   const pick = useCallback(
     (i: number) => {
       audio.sfx("click");
@@ -381,10 +422,24 @@ function War({ match, onLeave, onAgain }: { match: Match; onLeave(): void; onAga
           onLeave={onLeave}
         />
         <div className={s.mapArea}>
-          <WarMap game={g} seats={view.seats} selected={selected} targets={targets} march={view.march} flash={view.flash} battleAt={view.battle?.at ?? null} onPick={pick} />
+          <WarMap
+            game={g}
+            seats={view.seats}
+            selected={selected}
+            targets={targets}
+            march={view.march}
+            flash={view.flash}
+            battleAt={view.battle?.at ?? null}
+            odds={odds}
+            floats={view.floats}
+            coachAt={focus.at}
+            onPick={pick}
+          />
           <Chronicle view={view} />
           <Herald view={view} onClick={() => ctl.hurry()} />
           <BattleCard battle={view.battle} onClick={() => ctl.hurry()} />
+          <Toast view={view} />
+          {match.tutorial && <Coach view={view} selected={selected} onFocus={setFocus} />}
         </div>
         <SidePanel
           view={view}
@@ -394,6 +449,7 @@ function War({ match, onLeave, onAgain }: { match: Match; onLeave(): void; onAga
           setArmy={setArmy}
           error={error}
           setError={setError}
+          coach={focus.pulse ?? null}
           onEnd={() => {
             audio.sfx("seal");
             setError(ctl.play({ type: "end" }));

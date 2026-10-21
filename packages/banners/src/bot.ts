@@ -112,6 +112,9 @@ function bestAttack(s: BannersState, id: string, level: BotLevel, rand: () => nu
     const owner = playerById(s, s.provinces[j]!.owner);
     let value = target.income + (target.crown ? 7 : 0) + (owner && owner.capital === j ? 3 : 0) + (s.provinces[j]!.castle ? 2 : 0);
     if (owner && isLeader(s, owner.id)) value += 2;
+    // The king's decree sweetens the prize.
+    const d = playerById(s, id)!.decree;
+    if (d && !d.done && (d.kind === "conquer" || (d.kind === "crown" && target.crown) || (d.kind === "knights" && total.knights > 0))) value += d.reward;
     const v = value * p + rand() * (level === "easy" ? 3 : 1);
     if (!best || v > best.v) {
       // Lead with the strongest column.

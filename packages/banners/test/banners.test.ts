@@ -151,3 +151,31 @@ void crownsOf;
 void score;
 void size;
 export type { Move };
+
+describe("royal decrees", () => {
+  it("every house starts with one, and taking a province pays a conquest decree once", () => {
+    const s = newGame(2026, 3);
+    for (const p of s.players) expect(p.decree).not.toBeNull();
+    s.players[0]!.decree = { kind: "conquer", reward: 4, done: false };
+    const gold = s.players[0]!.gold;
+    const greywater = PROVINCES.find((p) => p.name === "Greywater")!.id;
+    const varnhold = s.players[0]!.capital;
+    const r = banners.apply(s, "p0", { type: "march", from: varnhold, to: greywater, army: { ...s.provinces[varnhold]!.army } });
+    const won = r.state.provinces[greywater]!.owner === "p0";
+    expect(r.events.some((e) => e.type === "decree")).toBe(won);
+    expect(r.state.players[0]!.gold).toBe(gold + (won ? 4 : 0));
+    expect(r.state.players[0]!.decree!.done).toBe(won);
+  });
+
+  it("raising three troops in a turn fulfils a muster decree", () => {
+    const s = newGame(5, 2);
+    s.players[0]!.decree = { kind: "muster", reward: 3, done: false };
+    s.players[0]!.gold = 20;
+    const r = banners.apply(s, "p0", { type: "recruit", at: s.players[0]!.capital, unit: "foot", count: 3 });
+    expect(r.state.players[0]!.gold).toBe(20 - 6 + 3);
+  });
+
+  it("the same seed gives the same decrees", () => {
+    expect(newGame(77).players.map((p) => p.decree)).toEqual(newGame(77).players.map((p) => p.decree));
+  });
+});

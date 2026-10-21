@@ -6,6 +6,7 @@ import {
   CROWNS,
   CROWNS_ALLIANCE,
   CROWNS_SOLO,
+  DECREE_INFO,
   HOUSES,
   MUSTER_CAP,
   PROVINCES,
@@ -96,6 +97,7 @@ export function SidePanel({
   error,
   setError,
   onEnd,
+  coach,
 }: {
   view: View;
   ctl: BannersController;
@@ -105,6 +107,8 @@ export function SidePanel({
   error: string | null;
   setError(e: string | null): void;
   onEnd(): void;
+  /** The tutorial wants this control noticed. */
+  coach?: "raise" | "end" | "march" | null;
 }) {
   const g = view.game;
   const me = g.players.find((p) => p.id === view.localId)!;
@@ -114,6 +118,17 @@ export function SidePanel({
   const prov = selected !== null ? g.provinces[selected]! : null;
   const def = selected !== null ? PROVINCES[selected]! : null;
   const mineSel = prov && prov.owner === view.localId;
+  const pulse = (k: NonNullable<typeof coach>) => (coach === k ? s.coachPulse : "");
+  const decree = me.decree;
+  // Before the turn is sealed: gold that could still raise troops, or troops that have not marched.
+  const nudge = (() => {
+    if (!myTurn) return null;
+    const room = provincesOf(g, me.id).some((i) => isStronghold(g, i) && g.mustered[i]! < MUSTER_CAP);
+    if (room && me.gold >= unitCost(g, "foot")) return `${me.gold} gold unspent.`;
+    const idle = provincesOf(g, me.id).filter((i) => size(g.provinces[i]!.army) > 0 && PROVINCES[i]!.adj.some((j) => g.provinces[j]!.owner !== me.id)).length;
+    if (idle) return `${idle} ${idle === 1 ? "army" : "armies"} on the border could still march.`;
+    return null;
+  })();
 
   return (
     <aside className={s.side}>
@@ -135,6 +150,16 @@ export function SidePanel({
             Crowns {crownsOf(g, me.id)}/{CROWNS.length}
           </span>
         </div>
+        {decree && me.alive && g.phase === "play" && (
+          <div className={`${s.decree} ${decree.done ? s.decreeDone : ""}`} title="The crown sets every house a task each round. Do it for a quick reward.">
+            <span style={{ fontSize: 20 }}>{decree.done ? "✓" : "📜"}</span>
+            <span>
+              <b>{DECREE_INFO[decree.kind].title}</b>
+              <small>{decree.done ? "Done. A new decree comes with the next season." : `Royal decree: ${DECREE_INFO[decree.kind].text}`}</small>
+            </span>
+            <span className={s.decreeReward}>+{decree.reward}g</span>
+          </div>
+        )}
         {!me.alive && <p className={s.err}>Your house has fallen. Watch how the war ends.</p>}
       </section>
 
@@ -176,7 +201,7 @@ export function SidePanel({
               <div className={s.h2} style={{ marginBottom: 6 }}>
                 March
               </div>
-              <div className={s.marchGrid}>
+              <div className={`${s.marchGrid} ${pulse("march")}`}>
                 {UNITS_ORDER.map((u) =>
                   prov.army[u] > 0 ? (
                     <Row key={u} label={UNIT_INFO[u].plural}>
@@ -199,14 +224,24 @@ export function SidePanel({
                 Raise troops <span style={{ textTransform: "none", letterSpacing: 0 }}>({MUSTER_CAP - g.mustered[selected!]!} left this turn)</span>
               </div>
               <div className={s.recruit}>
-                {UNITS_ORDER.map((u) => (
-                  <Row key={u} label={UNIT_INFO[u].plural} sub={UNIT_INFO[u].blurb}>
-                    <span className={s.price}>{unitCost(g, u)}g</span>
-                    <button type="button" className={s.btn} disabled={me.gold < unitCost(g, u) || g.mustered[selected!]! >= MUSTER_CAP} onClick={() => act({ type: "recruit", at: selected!, unit: u })}>
-                      Raise
-                    </button>
-                  </Row>
-                ))}
+                {UNITS_ORDER.map((u) => {
+                  const most = Math.min(MUSTER_CAP - g.mustered[selected!]!, Math.floor(me.gold / unitCost(g, u)));
+                  return (
+                    <Row key={u} label={UNIT_INFO[u].plural} sub={UNIT_INFO[u].blurb}>
+                      <span className={s.price}>{unitCost(g, u)}g</span>
+                      <span className={s.row} style={{ gap: 6, flexWrap: "nowrap" }}>
+                        <button type="button" className={`${s.btn} ${u === "foot" ? pulse("raise") : ""}`} disabled={most < 1} onClick={() => act({ type: "recruit", at: selected!, unit: u })}>
+                          Raise
+                        </button>
+                        {most >= 2 && (
+                          <button type="button" className={s.btn} onClick={() => act({ type: "recruit", at: selected!, unit: u, count: most })} title={`Raise ${most} for ${most * unitCost(g, u)} gold`}>
+                            ×{most}
+                          </button>
+                        )}
+                      </span>
+                    </Row>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -236,7 +271,8 @@ export function SidePanel({
 
       {g.phase === "play" && me.alive && (
         <div className={s.endBar}>
-          <button type="button" className={s.seal} disabled={!myTurn} onClick={onEnd}>
+          {nudge && <p className={s.nudge}>{nudge}</p>}
+          <button type="button" className={`${s.seal} ${pulse("end")}`} disabled={!myTurn} onClick={onEnd}>
             {myTurn ? "End turn" : "Waiting"}
           </button>
         </div>
@@ -352,6 +388,18 @@ export function Herald({ view, onClick }: { view: View; onClick(): void }) {
       )}
       <div className={s.heraldTitle}>{a.title}</div>
       <div className={s.heraldText}>{a.text}</div>
+      {a.decree && <div className={s.heraldDecree}>📜 {a.decree}</div>}
+    </div>
+  );
+}
+
+export function Toast({ view }: { view: View }) {
+  const t = view.toast;
+  if (!t) return null;
+  return (
+    <div key={t.id} className={`${s.toast} ${t.tone === "war" ? s.toastWar : ""}`} role="status">
+      <b>{t.title}</b>
+      <span>{t.text}</span>
     </div>
   );
 }
@@ -372,7 +420,8 @@ export function BattleCard({ battle, onClick }: { battle: BattleShow | null; onC
   }, [battle]);
   if (!battle) return null;
   const done = shown >= battle.rounds.length;
-  const rows = battle.rounds.slice(Math.max(0, shown - 6), shown);
+  const first = Math.max(0, shown - 6);
+  const rows = battle.rounds.slice(first, shown);
   const a = HOUSES[battle.attacker];
   return (
     <div className={s.overlay} onClick={onClick}>
@@ -393,10 +442,10 @@ export function BattleCard({ battle, onClick }: { battle: BattleShow | null; onC
         </div>
         <div className={s.diceRows}>
           {rows.map((r, i) => (
-            <div key={`${shown}-${i}`} className={s.diceRow}>
+            <div key={first + i} className={s.diceRow}>
               <div className={`${s.dice} ${s.diceA}`}>
                 {r.a.map((d, k) => (
-                  <span key={k} className={`${s.die} ${s.dieA} ${r.d[k] !== undefined && d > r.d[k]! ? s.dieWin : ""}`}>
+                  <span key={k} className={`${s.die} ${s.dieA} ${s.tumble} ${r.d[k] !== undefined && d > r.d[k]! ? s.dieWin : ""}`} style={{ animationDelay: `${k * 40}ms` }}>
                     {d}
                   </span>
                 ))}
@@ -406,7 +455,7 @@ export function BattleCard({ battle, onClick }: { battle: BattleShow | null; onC
               </span>
               <div className={s.dice}>
                 {r.d.map((d, k) => (
-                  <span key={k} className={`${s.die} ${r.a[k] !== undefined && d >= r.a[k]! ? s.dieWin : ""}`}>
+                  <span key={k} className={`${s.die} ${s.tumble} ${r.a[k] !== undefined && d >= r.a[k]! ? s.dieWin : ""}`} style={{ animationDelay: `${60 + k * 40}ms` }}>
                     {d}
                   </span>
                 ))}
@@ -532,6 +581,10 @@ export function Rules({ onClose }: { onClose(): void }) {
           <div>
             <b>Alliances</b>
             Send an envoy; they answer on their turn. Allies cannot attack each other and help each other defend. Breaking an oath costs you.
+          </div>
+          <div>
+            <b>Royal decrees</b>
+            Each season the crown sets every house a small task: take a province, win with knights, raise 3 troops. Do it for instant gold.
           </div>
           <div>
             <b>Victory</b>

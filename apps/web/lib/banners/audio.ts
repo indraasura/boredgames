@@ -1,6 +1,6 @@
 /** War-camp sound, made in the browser: a drone and lute for music, drums, steel, horns, coin and bells for effects. */
 
-export type Sfx = "click" | "coin" | "muster" | "march" | "clash" | "victory" | "defeat" | "seize" | "bell" | "alliance" | "betrayal" | "seal" | "turn" | "fanfare";
+export type Sfx = "click" | "coin" | "muster" | "march" | "clash" | "victory" | "defeat" | "seize" | "bell" | "alliance" | "betrayal" | "seal" | "turn" | "fanfare" | "reward" | "streak" | "crown";
 
 const D_DORIAN = [62, 64, 65, 67, 69, 71, 72, 74, 76, 77];
 const midi = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
@@ -213,6 +213,24 @@ class BannersAudio {
       case "fanfare":
         [[62, 69], [64, 71], [66, 74], [62, 69, 74, 78]].forEach((ch, i) => this.horn(t + i * 0.32, ch, i === 3 ? 2 : 0.4, 0.13));
         for (let i = 0; i < 8; i++) this.drum(t + i * 0.16, i % 2 === 0, 0.3);
+        break;
+      case "reward":
+        // A spill of coins, then a bright bell.
+        for (let i = 0; i < 7; i++) this.tone(this.sfxBus, 2000 + i * 260 + Math.random() * 120, t + i * 0.05, 0.22, { type: "sine", gain: 0.07 });
+        this.bellAt(t + 0.36, 1047, 0.09, 1.4);
+        break;
+      case "streak":
+        this.horn(t, [62, 69], 0.25, 0.13);
+        this.horn(t + 0.2, [66, 74], 0.25, 0.13);
+        this.horn(t + 0.4, [69, 78, 81], 0.9, 0.14);
+        this.drum(t, true, 0.45);
+        this.drum(t + 0.4, true, 0.45);
+        break;
+      case "crown":
+        this.bellAt(t, 587, 0.13);
+        this.bellAt(t + 0.18, 880, 0.11);
+        this.horn(t + 0.25, [62, 66, 69, 74], 1.4, 0.13);
+        for (let i = 0; i < 4; i++) this.drum(t + i * 0.12, i % 2 === 0, 0.35);
         break;
     }
   }

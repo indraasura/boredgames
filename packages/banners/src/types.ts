@@ -49,7 +49,8 @@ export interface PlayerState {
   prestige: number;
   /** Players this one broke with, and the round until which they will not ally again. */
   grudges: { id: string; until: number }[];
-  /** Units raised at each stronghold this turn. */
+  /** This round's royal decree: a small task with an instant reward. */
+  decree: Decree | null;
 }
 
 export interface Proposal {
@@ -61,6 +62,15 @@ export interface Proposal {
 
 export type Season = "spring" | "summer" | "autumn" | "winter";
 export const SEASONS: readonly Season[] = ["spring", "summer", "autumn", "winter"];
+
+/** Small tasks the crown sets every house each round, for a quick reward. */
+export type DecreeKind = "conquer" | "crown" | "knights" | "muster" | "castle";
+
+export interface Decree {
+  kind: DecreeKind;
+  reward: number;
+  done: boolean;
+}
 
 export type Tiding = "quiet" | "harvest" | "plague" | "mercenaries" | "storms";
 

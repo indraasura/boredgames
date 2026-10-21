@@ -1,5 +1,7 @@
 import { Rng, type BotLevel, type GameEvent } from "@boredgames/engine";
 import {
+  CROWNS_SOLO,
+  DECREE_INFO,
   HOUSES,
   PROVINCES,
   SEASON_INFO,
@@ -11,6 +13,7 @@ import {
   type Army,
   type BannersState,
   type BattleRound,
+  type DecreeKind,
   type HouseId,
   type Move,
   type Season,
@@ -64,13 +67,31 @@ export interface BattleShow {
 
 export interface Announce {
   id: number;
-  kind: "round" | "alliance" | "betrayal" | "fallen" | "turn" | "plunder";
+  kind: "round" | "alliance" | "betrayal" | "fallen" | "turn" | "plunder" | "crown";
   title: string;
   text: string;
   house?: HouseId;
   other?: HouseId;
   season?: Season;
   tiding?: Tiding;
+  /** The player's new royal decree, shown with the new season. */
+  decree?: string;
+}
+
+/** A number that rises off the map and fades: gold won, men lost. */
+export interface Float {
+  id: number;
+  at: number;
+  text: string;
+  tone: "gold" | "loss" | "crown";
+}
+
+/** A quick cheer for the player that does not stop the game. */
+export interface Toast {
+  id: number;
+  title: string;
+  text: string;
+  tone: "gold" | "war";
 }
 
 export interface View {
@@ -84,6 +105,10 @@ export interface View {
   announce: Announce | null;
   /** Province that just changed hands, for a flash on the map. */
   flash: { at: number; id: number } | null;
+  floats: Float[];
+  toast: Toast | null;
+  /** Marches the player at this computer has made, for the tutorial. */
+  myMarches: number;
 }
 
 const houseOf = (seats: Seat[], id: string | null | undefined): HouseId | null => seats.find((s) => s.id === id)?.house ?? null;
@@ -128,11 +153,45 @@ export class BannersController {
     this.fast = !!opts.fast;
     this.botRng = new Rng(seed ^ 0x5bd1e995);
     const game = banners.setup({ players: seats.map((s) => ({ id: s.id, name: s.name })), config: { rounds }, seed });
-    this.view = { game, seats, localId: this.localId, busy: false, chronicle: [], march: null, battle: null, announce: null, flash: null };
+    this.view = { game, seats, localId: this.localId, busy: false, chronicle: [], march: null, battle: null, announce: null, flash: null, floats: [], toast: null, myMarches: 0 };
     this.log(`The year begins. ${SEASON_INFO.spring.name}: ${SEASON_INFO.spring.blurb}`, "info");
   }
 
   private readonly fast: boolean;
+  /** Provinces the local player has taken this turn. */
+  private streak = 0;
+  /** Where the last thing happened, so a reward can rise from there. */
+  private lastAt = -1;
+
+  private float(at: number, text: string, tone: Float["tone"]) {
+    const f: Float = { id: ++this.seq, at, text, tone };
+    this.set({ floats: [...this.view.floats, f] });
+    const h = setTimeout(() => {
+      this.timers.delete(h);
+      this.set({ floats: this.view.floats.filter((x) => x.id !== f.id) });
+    }, 1600);
+    this.timers.add(h);
+  }
+
+  private toast(title: string, text: string, tone: Toast["tone"]) {
+    const t: Toast = { id: ++this.seq, title, text, tone };
+    this.set({ toast: t });
+    const h = setTimeout(() => {
+      this.timers.delete(h);
+      if (this.view.toast?.id === t.id) this.set({ toast: null });
+    }, 2400);
+    this.timers.add(h);
+  }
+
+  /** Another province taken by the player this turn: cheer a run of them. */
+  private conquest(player: unknown) {
+    if (player !== this.localId) return;
+    this.streak++;
+    if (this.streak < 2) return;
+    const names = ["", "", "Double conquest!", "Triple conquest!", "Rampage!", "Unstoppable!"];
+    audio.sfx("streak");
+    this.toast(names[Math.min(this.streak, 5)]!, `${this.streak} provinces taken this turn.`, "war");
+  }
 
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -146,6 +205,8 @@ export class BannersController {
   }
 
   start() {
+    // React may dispose and start the same controller again (strict mode in development).
+    this.disposed = false;
     this.after();
   }
 
@@ -239,7 +300,7 @@ export class BannersController {
         if (this.disposed || this.view.busy || this.view.game !== g) return;
         const m = banners.botMove(g, seat.id, seat.bot!, () => this.botRng.next());
         void this.dispatch(seat.id, m, false);
-      }, this.fast ? 20 : 260);
+      }, this.fast ? 20 : 170);
       this.timers.add(h);
     }
   }
@@ -270,6 +331,7 @@ export class BannersController {
       case "recruit": {
         audio.sfx("muster");
         const at = e.at as number;
+        this.lastAt = at;
         const key = `muster-${e.player}-${at}-${final.round}`;
         const raised = final.provinces[at]!.tired;
         this.log(`${hname(H(e.player))} raises troops at ${pname(at)}: ${describeArmy(raised)} ready next turn.`, "info", H(e.player) ?? undefined, key);
@@ -280,6 +342,7 @@ export class BannersController {
       }
       case "castle":
         audio.sfx("seal");
+        this.lastAt = e.at as number;
         this.log(`${hname(H(e.player))} raises castle walls at ${pname(e.at as number)}.`, "info", H(e.player) ?? undefined);
         this.set({ game: { ...this.view.game, provinces: final.provinces, players: final.players } });
         await this.sleep(300);
@@ -292,7 +355,7 @@ export class BannersController {
         const g = structuredClone(this.view.game);
         const p = g.provinces[show.from]!;
         p.army = { foot: p.army.foot - army.foot, archers: p.army.archers - army.archers, knights: p.army.knights - army.knights };
-        this.set({ march: show, game: g });
+        this.set({ march: show, game: g, myMarches: this.view.myMarches + (e.player === this.localId ? 1 : 0) });
         await this.sleep(show.via !== null ? 900 : 650);
         break;
       }
@@ -301,6 +364,8 @@ export class BannersController {
         const from = H(e.from);
         this.log(`${hname(H(e.player))} takes ${pname(e.at as number)}${from ? ` from ${hname(from)}` : ""} without a fight.`, "war", H(e.player) ?? undefined);
         this.set({ game: { ...this.view.game, provinces: final.provinces }, march: null, flash: { at: e.at as number, id: ++this.seq } });
+        this.conquest(e.player);
+        this.lastAt = e.at as number;
         await this.sleep(350);
         break;
       }
@@ -336,12 +401,43 @@ export class BannersController {
           b.attacker,
         );
         this.set({ battle: null, game: { ...this.view.game, provinces: final.provinces }, flash: b.won ? { at: b.at, id: ++this.seq } : this.view.flash });
+        if (lostD) this.float(b.at, `−${lostD}`, "loss");
+        if (lostA) this.float(b.from, `−${lostA}`, "loss");
+        if (b.won) this.conquest(e.attacker);
+        this.lastAt = b.won ? b.at : b.from;
         break;
       }
       case "plunder":
         audio.sfx("coin");
         this.log(`${hname(H(e.player))} plunders ${e.gold} gold from the capital of ${hname(H(e.from))}.`, "gold", H(e.player) ?? undefined);
+        if (e.player === this.localId && (e.gold as number) > 0) this.toast("Plunder!", `${e.gold} gold from their treasury.`, "gold");
+        this.set({ game: { ...this.view.game, players: final.players } });
         break;
+      case "decree": {
+        const info = DECREE_INFO[e.kind as DecreeKind];
+        this.log(`${hname(H(e.player))} fulfils the royal decree (${info.title.toLowerCase()}) for ${e.reward} gold.`, "gold", H(e.player) ?? undefined);
+        this.set({ game: { ...this.view.game, players: final.players } });
+        if (e.player === this.localId) {
+          audio.sfx("reward");
+          this.toast("Decree fulfilled", `${info.title}: +${e.reward} gold`, "gold");
+          const cap = final.players.find((p) => p.id === e.player)!.capital;
+          this.float(this.lastAt >= 0 ? this.lastAt : cap, `+${e.reward}g`, "gold");
+          await this.sleep(500);
+        }
+        break;
+      }
+      case "crownTaken": {
+        const h = H(e.player)!;
+        const n = e.crowns as number;
+        const mine = e.player === this.localId;
+        audio.sfx("crown");
+        this.log(`${hname(h)} takes the crown of ${pname(e.at as number)}. ${n} of ${CROWNS_SOLO}.`, "war", h);
+        this.float(e.at as number, "♛", "crown");
+        this.set({ announce: { id: ++this.seq, kind: "crown", title: mine ? `Crown taken! ${n} of ${CROWNS_SOLO}` : `${HOUSES[h].name} takes a crown`, text: mine ? (n >= CROWNS_SOLO ? "Hold them to the end of the round and the realm is yours." : `${pname(e.at as number)} is yours. ${CROWNS_SOLO - n} more to rule alone.`) : `${pname(e.at as number)} falls. They hold ${n} of ${CROWNS_SOLO}${n >= CROWNS_SOLO - 1 ? ". Stop them!" : "."}`, house: h } });
+        await this.sleep(mine ? 1900 : 1500);
+        this.set({ announce: null });
+        break;
+      }
       case "fallen": {
         audio.sfx("betrayal");
         const h = H(e.player)!;
@@ -394,13 +490,20 @@ export class BannersController {
         const year = Math.ceil((e.round as number) / 4);
         this.log(`${SEASON_INFO[season].name} of year ${year}. ${TIDING_INFO[tiding].name}${at !== null ? ` in ${pname(at)}` : ""}.`, tiding === "plague" ? "doom" : "info");
         this.set({ announce: { id: ++this.seq, kind: "round", title: `${SEASON_INFO[season].name}, year ${year}`, text: `${TIDING_INFO[tiding].name}: ${TIDING_INFO[tiding].blurb}${at !== null ? ` (${pname(at)})` : ""}`, season, tiding } });
-        await this.sleep(2300);
+        const d = final.players.find((p) => p.id === this.localId)?.decree;
+        if (d) this.set({ announce: { ...this.view.announce!, decree: `Royal decree: ${DECREE_INFO[d.kind].title}. ${DECREE_INFO[d.kind].text} +${d.reward} gold.` } });
+        await this.sleep(2600);
         this.set({ announce: null });
         break;
       }
       case "turn": {
         const h = H(e.player)!;
-        if (e.player === this.localId) audio.sfx("turn");
+        if (e.player === this.localId) {
+          audio.sfx("turn");
+          this.streak = 0;
+          const cap = final.players.find((p) => p.id === e.player)!.capital;
+          if ((e.income as number) > 0 && final.provinces[cap]!.owner === e.player) this.float(cap, `+${e.income}g`, "gold");
+        }
         if ((e.income as number) > 0) this.log(`${hname(h)} collects ${e.income} gold.`, "gold", h);
         break;
       }

@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useMemo, useRef } from "react";
 import { COAST, HOUSES, MAP_H, MAP_W, PROVINCES, seasonOf, size, type BannersState, type HouseId } from "@boredgames/banners";
-import type { MarchShow, Seat } from "@/lib/banners/controller";
+import type { Float, MarchShow, Seat } from "@/lib/banners/controller";
 import { ShieldArt } from "./Heraldry";
 import s from "./banners.module.css";
 
@@ -141,12 +141,17 @@ export interface MapProps {
   march: MarchShow | null;
   flash: { at: number; id: number } | null;
   battleAt: number | null;
+  /** Chance to win, for each province the selected troops can attack. */
+  odds: Map<number, number>;
+  floats: Float[];
+  /** The tutorial points here. */
+  coachAt: number | null;
   onPick(i: number): void;
 }
 
 const houseOf = (seats: Seat[], id: string | null) => seats.find((x) => x.id === id)?.house ?? null;
 
-function WarMapInner({ game, seats, selected, targets, march, flash, battleAt, onPick }: MapProps) {
+function WarMapInner({ game, seats, selected, targets, march, flash, battleAt, odds, floats, coachAt, onPick }: MapProps) {
   const marks = useMemo(terrainMarks, []);
   const polys = useMemo(() => PROVINCES.map((p) => pts(p.poly)), []);
   const coast = useMemo(() => pts(COAST), []);
@@ -264,6 +269,28 @@ function WarMapInner({ game, seats, selected, targets, march, flash, battleAt, o
         return <Banner key={`a${p.id}`} x={p.x} y={p.y - 2} house={houseOf(seats, pr.owner)} count={total} tired={ready === 0} neutral={!pr.owner} />;
       })}
 
+      {/* the odds of each attack */}
+      {[...odds].map(([i, p]) => {
+        const pr = PROVINCES[i]!;
+        const pct = Math.round(p * 100);
+        const col = p >= 0.75 ? "#3d6b2e" : p >= 0.5 ? "#9a6a12" : "#8e1b1b";
+        return (
+          <g key={`o${i}`} transform={`translate(${pr.x + 34} ${pr.y + 6})`} pointerEvents="none" className={s.odds}>
+            <rect x={-27} y={-14} width={54} height={26} rx={13} fill="#f3ecd8" stroke={col} strokeWidth={2.5} />
+            <text y={5} textAnchor="middle" fontSize={15} fontFamily="var(--f-title)" fontWeight={700} fill={col}>
+              {pct >= 100 ? "sure" : `${pct}%`}
+            </text>
+          </g>
+        );
+      })}
+
+      {coachAt !== null && (
+        <g transform={`translate(${PROVINCES[coachAt]!.x} ${PROVINCES[coachAt]!.y})`} pointerEvents="none">
+          <circle r={58} className={s.coachRing} />
+          <circle r={58} className={s.coachRing} style={{ animationDelay: "0.7s" }} />
+        </g>
+      )}
+
       {march && <MarchToken key={march.id} m={march} />}
 
       {/* battle and capture */}
@@ -275,6 +302,11 @@ function WarMapInner({ game, seats, selected, targets, march, flash, battleAt, o
           <path d="M-22 -22 L22 22 M22 -22 L-22 22" stroke="#2b1d12" strokeWidth={5} strokeLinecap="round" opacity={0.75} />
         </g>
       )}
+      {floats.map((f, k) => (
+        <text key={f.id} x={PROVINCES[f.at]!.x} y={PROVINCES[f.at]!.y - 40 - (k % 2) * 16} textAnchor="middle" className={`${s.float} ${s[`float_${f.tone}`]}`} pointerEvents="none">
+          {f.text}
+        </text>
+      ))}
       {flash && (
         <circle key={flash.id} cx={PROVINCES[flash.at]!.x} cy={PROVINCES[flash.at]!.y} r={60} fill="none" stroke="#e2bd62" className={s.flash} pointerEvents="none" />
       )}

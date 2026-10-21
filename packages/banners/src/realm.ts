@@ -67,6 +67,14 @@ export const TIDING_INFO: Record<Tiding, { name: string; blurb: string }> = {
   storms: { name: "Great storms", blurb: "The roads to one province are washed out: no one may march into it this round." },
 };
 
+export const DECREE_INFO: Record<import("./types").DecreeKind, { title: string; text: string; reward: number }> = {
+  conquer: { title: "Expand the realm", text: "Take any province.", reward: 4 },
+  crown: { title: "Seize a crown", text: "Capture a crown city.", reward: 9 },
+  knights: { title: "Glory to the knights", text: "Win a battle with knights in the attack.", reward: 4 },
+  muster: { title: "Call the banners", text: "Raise 3 troops in one turn.", reward: 3 },
+  castle: { title: "Build the walls", text: "Build a castle.", reward: 3 },
+};
+
 export const emptyArmy = (): Army => ({ foot: 0, archers: 0, knights: 0 });
 export const size = (a: Army) => a.foot + a.archers + a.knights;
 export const addArmy = (a: Army, b: Army): Army => ({ foot: a.foot + b.foot, archers: a.archers + b.archers, knights: a.knights + b.knights });
