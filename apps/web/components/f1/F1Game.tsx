@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { DEFAULT_SETUP, DRIVER_NAMES, TEAMS, clampSetup, fillGrid, type Entry, type RaceConfig } from "@boredgames/f1";
+import { DEFAULT_SETUP, DRIVER_NAMES, TEAMS, clampSetup, fillGrid, type AidLevel, type Entry, type RaceConfig } from "@boredgames/f1";
 import { F1Controller, type Hud } from "@/lib/f1/controller";
 import { GuestNet, HostNet, fromLite, toLite, type ConfigLite, type F1Msg, type Net } from "@/lib/f1/net";
 import { JoinFlow } from "../shared/Invite";
@@ -14,8 +14,7 @@ interface Run {
   config: RaceConfig;
   localId: string;
   net: Net | null;
-  steerAssist: boolean;
-  tractionControl: boolean;
+  assist: AidLevel;
   fast: boolean;
   nonce: number;
 }
@@ -63,7 +62,7 @@ function makeRun(cfg: StartConfig, fast: boolean, net: Net | null, guests: { ent
   const ai = grid.slice(humans.length);
   const entries = cfg.mode === "free" ? [me] : arrange(humans, ai, seed);
   const config: RaceConfig = { mode: cfg.mode, track: cfg.track, laps: cfg.laps, weather: cfg.weather, difficulty: cfg.difficulty, entries, seed };
-  return { config, localId: "p0", net, steerAssist: cfg.steerAssist, tractionControl: cfg.tractionControl, fast, nonce: 0 };
+  return { config, localId: "p0", net, assist: cfg.assist, fast, nonce: 0 };
 }
 
 export default function F1Game() {
@@ -81,8 +80,7 @@ export default function F1Game() {
         opponents: query.ai ?? 9,
         car: { team: TEAMS[0]!, compound: "medium", setup: { ...DEFAULT_SETUP } },
         name: "You",
-        steerAssist: true,
-        tractionControl: true,
+        assist: "standard",
         friends: null,
         room: null,
       };
@@ -141,7 +139,7 @@ export default function F1Game() {
             isStart={(m) => m.t === "start"}
             onBack={toMenu}
             onStart={(net, m) => {
-              if (m.t === "start") play({ config: fromLite(m.cfg, m.you), localId: m.you, net, steerAssist: true, tractionControl: true, fast: false });
+              if (m.t === "start") play({ config: fromLite(m.cfg, m.you), localId: m.you, net, assist: "standard" as const, fast: false });
             }}
             connected={(net, name) => <GuestLobby net={net} name={name} />}
           />
@@ -174,7 +172,7 @@ export default function F1Game() {
       }}
       onRestartFromHost={(msg) => {
         // A guest: the host started another race.
-        if (msg.t === "start" && screen.run.net) play({ config: fromLite(msg.cfg, msg.you), localId: msg.you, net: screen.run.net, steerAssist: screen.run.steerAssist, tractionControl: screen.run.tractionControl, fast: false });
+        if (msg.t === "start" && screen.run.net) play({ config: fromLite(msg.cfg, msg.you), localId: msg.you, net: screen.run.net, assist: screen.run.assist, fast: false });
       }}
     />
   );
@@ -236,8 +234,7 @@ function Game({ run, onQuit, onAgain, onRestartFromHost }: { run: Run; onQuit():
       c = new F1Controller(run.config, {
         localId: run.localId,
         net,
-        steerAssist: run.steerAssist,
-        tractionControl: run.tractionControl,
+        assist: run.assist,
         fast: run.fast,
         quality: window.devicePixelRatio > 2 || window.innerWidth < 700 ? "low" : "high",
       });

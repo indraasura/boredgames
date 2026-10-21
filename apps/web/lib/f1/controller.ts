@@ -6,6 +6,7 @@ import {
   WEATHERS,
   gap,
   trackAt,
+  type AidLevel,
   type Compound,
   type PitState,
   type RaceCar,
@@ -102,8 +103,7 @@ export interface ControllerOptions {
   /** The car this computer drives. */
   localId: string;
   net?: Net | null;
-  steerAssist: boolean;
-  tractionControl: boolean;
+  assist: AidLevel;
   fast?: boolean;
   quality?: "low" | "high";
 }
@@ -151,12 +151,14 @@ export class F1Controller {
   private lastLights = 0;
   private lastPos = 0;
   private resizeObs: ResizeObserver | null = null;
+  private guidePlan: unknown = null;
 
   constructor(
     readonly config: RaceConfig,
     private opts: ControllerOptions,
   ) {
     this.race = new Race(config);
+    this.race.setAssist(opts.assist);
     this.track = this.race.track;
     this.controls = new Controls(() => !this.paused && !this.menu);
     this.controls.onAction((a) => this.action(a));
@@ -291,9 +293,11 @@ export class F1Controller {
       name: c.entry.name,
       helmet: ["#ffffff", "#ffd12e", "#2dd4bf", "#f472b6", "#a3e635", "#fb923c", "#60a5fa", "#e11d48"][Math.abs(hash(c.id)) % 8]!,
       mine: c.id === this.opts.localId,
+      number: (Math.abs(hash(c.id)) % 98) + 1,
     }));
     this.scene = new F1Scene(canvas, this.track, cars, styleFor(this.track.id), { quality: this.opts.quality });
     this.scene.setCamera(this.camera);
+    this.guidePlan = null;
     this.resizeObs = new ResizeObserver(() => this.scene?.resize());
     this.resizeObs.observe(canvas);
     this.last = performance.now();
@@ -402,13 +406,13 @@ export class F1Controller {
   private loop = (now: number) => {
     if (this.disposed) return;
     this.raf = requestAnimationFrame(this.loop);
-    const dt = Math.min(0.1, (now - this.last) / 1000);
+    const dt = Math.max(0, Math.min(0.1, (now - this.last) / 1000));
     this.last = now;
     const me = this.me;
     if (!this.paused) {
       if (me && !me.remote) {
         const read = this.controls.read(dt, Math.hypot(me.state.u, me.state.v));
-        me.input = { ...read, steerAssist: this.opts.steerAssist, tractionControl: this.opts.tractionControl };
+        me.input = { ...read, steerAssist: false, tractionControl: false };
       }
       this.acc += this.opts.fast ? dt * 4 : dt;
       let steps = 0;
@@ -441,16 +445,34 @@ export class F1Controller {
           impact: c.impact,
           slip: Math.max(s.gripFront, s.gripRear) > 0.98 && Math.hypot(s.u, s.v) > 8 ? Math.min(1, Math.abs(Math.atan2(s.v, Math.max(1, s.u))) * 4 + 0.7) : 0,
           offTrack: c.offTrack,
+          ax: s.ax,
+          ay: s.ay,
         };
       });
       this.scene.setLights(this.race.phase === "lights" ? this.race.lights : 0);
       this.scene.update(this.paused ? 0 : dt, frames, this.opts.localId, { wetness: this.race.weather.wetness, rain: this.race.weather.rain, cloud: this.race.weather.cloud });
+      this.updateGuide();
       this.scene.render();
     }
     this.updateAudio();
 
     if (++this.frame % 4 === 0 || this.race.phase !== this.hud.phase || this.race.lights !== this.hud.lights) this.publish();
   };
+
+  /** The racing line on the road: shown when the driver has help turned on. */
+  private updateGuide() {
+    const me = this.me;
+    const scene = this.scene;
+    if (!me || !scene) return;
+    const show = this.opts.assist !== "pro";
+    const plan = this.race.linePlan(me);
+    if (plan !== this.guidePlan) {
+      this.guidePlan = plan;
+      scene.setGuide(plan);
+    }
+    const speed = Math.hypot(me.state.u, me.state.v);
+    scene.updateGuide(me.s, speed, show && me.pit === "none" && this.race.phase !== "grid" && this.race.phase !== "lights");
+  }
 
   private updateAudio() {
     const me = this.me;

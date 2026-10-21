@@ -451,11 +451,38 @@ export class MilestonesController {
           stage?.burst(idx, "coins");
           audio.sfx("payday");
           await this.toast("PAYDAY", passing ? "Passed a payday." : "Landed on a payday.", amount, passing ? 1000 : 1300);
+        } else if (e.laidOff) {
+          stage?.burst(idx, "smoke");
+          audio.sfx("bad");
+          await this.toast("LAID OFF", "No pay this time.", null, 1100, "bad");
         } else if (!passing) {
           await this.toast("PAYDAY", "No job yet.", null, 1100, "info");
         }
         break;
       }
+
+      case "round": {
+        const market = e.market as string;
+        if (market === "steady") break;
+        const boom = market === "boom";
+        audio.sfx(boom ? "good" : "bad");
+        await this.toast("MARKET", boom ? "Boom! Growth Funds and homes climb." : "Slump. Growth Funds and homes slide.", null, 1500, boom ? "good" : "bad");
+        break;
+      }
+
+      case "market": {
+        const boom = e.market === "boom";
+        stage?.burst(idx, boom ? "coins" : "smoke");
+        audio.sfx(boom ? "good" : "bad");
+        await this.toast("MARKET", e.headline as string, null, 1800, boom ? "good" : "bad");
+        break;
+      }
+
+      case "insured":
+        stage?.burst(idx, "sparkle");
+        audio.sfx("buy");
+        await this.toast("INSURANCE", `${name === "You" ? "You are" : name + " is"} covered against the next twist.`, -(e.cost as number), 1400);
+        break;
 
       case "raise":
         audio.sfx("good");

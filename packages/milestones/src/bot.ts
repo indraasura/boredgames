@@ -46,9 +46,17 @@ export function botMove(s: MilestonesState, level: BotLevel, rand: () => number)
       }
       case "invest": {
         const gain = o.amount * (Math.pow(1 + RULES.fundRate, rounds) - 1);
-        // Keep a cushion for bills.
-        return p.cash - o.amount < 40 ? gain - 20 : gain;
+        // Buy the dip, be wary of a boom that is about to cool, and keep a cushion for bills and lawsuits.
+        const mood = s.market === "slump" ? 6 : s.market === "boom" ? -3 : 0;
+        return p.cash - o.amount < 40 ? gain - 20 + mood : gain + mood;
       }
+      case "insure":
+        return p.cash - o.cost < 30 ? -5 : Math.min(22, rounds * 1.1) - o.cost;
+      case "settle":
+        // The leader protects the lead; someone trailing needs the gamble.
+        return -o.amount + (lead > 0 ? 6 : -6);
+      case "fight":
+        return -o.lose * RULES.fightOdds + (lead > 0 ? -6 : 6);
       case "rent":
         return 0;
       case "skip":

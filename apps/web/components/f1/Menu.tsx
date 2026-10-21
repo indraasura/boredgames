@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import {
+  AID_LEVELS,
   CIRCUITS,
   DEFAULT_SETUP,
   DRIVER_NAMES,
@@ -14,6 +15,7 @@ import {
   offsetsFor,
   planFor,
   tune,
+  type AidLevel,
   type Difficulty,
   type Mode,
   type WeatherChoice,
@@ -34,8 +36,7 @@ export interface StartConfig {
   opponents: number;
   car: CarSel;
   name: string;
-  steerAssist: boolean;
-  tractionControl: boolean;
+  assist: AidLevel;
   /** Friends who joined, when playing with friends, and the room they are in. */
   friends: Friend[] | null;
   room: { close(): void } | null;
@@ -77,8 +78,7 @@ export default function Menu({ onStart, onJoin, initial }: { onStart(cfg: StartC
   const [laps, setLaps] = useState(5);
   const [opponents, setOpponents] = useState(9);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  const [steerAssist, setSteerAssist] = useState(true);
-  const [tractionControl, setTractionControl] = useState(true);
+  const [assist, setAssist] = useState<AidLevel>("standard");
   const [name, setName] = useState("You");
   const [joined, setJoined] = useState(0);
   const slots = useRef<SlotsHandle>(null);
@@ -122,8 +122,7 @@ export default function Menu({ onStart, onJoin, initial }: { onStart(cfg: StartC
       opponents: tab === "free" ? 0 : opp,
       car,
       name: name.trim().slice(0, 14) || "You",
-      steerAssist,
-      tractionControl,
+      assist,
       ...(tab === "friends" ? (() => { const t = slots.current?.take(); return { friends: t?.friends ?? [], room: t?.room ?? null }; })() : { friends: null, room: null }),
     });
   };
@@ -295,16 +294,14 @@ export default function Menu({ onStart, onJoin, initial }: { onStart(cfg: StartC
 
         <section className={s.section}>
           <h2 className={s.h2}>Driver aids</h2>
-          <div className={s.options}>
-            <label className={s.toggle}>
-              <input type="checkbox" checked={steerAssist} onChange={(e) => setSteerAssist(e.target.checked)} />
-              Steering assist (limits the lock to what the tyres can use, helps in slides)
-            </label>
-            <label className={s.toggle}>
-              <input type="checkbox" checked={tractionControl} onChange={(e) => setTractionControl(e.target.checked)} />
-              Traction control
-            </label>
+          <div className={s.seg} role="radiogroup" aria-label="Driver aids">
+            {AID_LEVELS.map((l) => (
+              <button key={l.id} type="button" role="radio" aria-checked={assist === l.id} className={assist === l.id ? s.segOn : ""} onClick={() => setAssist(l.id)}>
+                {l.name}
+              </button>
+            ))}
           </div>
+          <p className={s.note}>{AID_LEVELS.find((l) => l.id === assist)!.blurb}</p>
         </section>
       </div>
 

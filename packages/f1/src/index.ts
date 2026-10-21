@@ -6,3 +6,4 @@ export * from "./line";
 export * from "./ai";
 export * from "./surface";
 export * from "./race";
+export * from "./aids";

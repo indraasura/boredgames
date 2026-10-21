@@ -142,8 +142,25 @@ describe("rules", () => {
       if (move.type === "choose" && p === "p0") decisions++;
       s = milestones.apply(s, p, move).state;
     }
-    expect(decisions).toBeLessThanOrEqual(14);
+    expect(decisions).toBeLessThanOrEqual(24);
   });
+
+  it("twists shake up games: lawsuits, layoffs, market swings and comebacks all happen", () => {
+    const kickers = new Set<string>();
+    const markets = new Set<string>();
+    for (let seed = 1; seed <= 30; seed++) {
+      const { events } = playOut(seed, 3, "medium");
+      for (const e of events) {
+        if (e.type === "card" && e.twist) kickers.add(e.kicker as string);
+        if (e.type === "round") markets.add(e.market as string);
+        if (e.type === "market") markets.add(e.market as string);
+      }
+    }
+    expect(markets).toEqual(new Set(["boom", "steady", "slump"]));
+    for (const k of ["LAYOFF", "TAX AUDIT", "DISASTER", "COMEBACK", "SCANDAL"]) expect(kickers.has(k), k).toBe(true);
+    expect([...kickers].some((k) => ["SETTLED", "CASE DISMISSED", "LOST IN COURT"].includes(k))).toBe(true);
+  });
+
 });
 
 describe("full games", () => {

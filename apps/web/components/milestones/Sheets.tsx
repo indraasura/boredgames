@@ -10,7 +10,8 @@ const KICKER: Record<ChoiceKind, string> = {
   branch: "CROSSROADS",
   job: "JOB",
   home: "HOME",
-  invest: "GROWTH FUND",
+  invest: "MARKET",
+  lawsuit: "LAWSUIT",
 };
 
 const TIER_NAME = {
@@ -110,9 +111,27 @@ function describe(o: Option, g: MilestonesState): Card {
       return {
         icon: "📈",
         label: `Invest ${money(o.amount)}`,
-        detail: `Grows 4% a round. About ${money(o.amount * Math.pow(1 + RULES.fundRate, 10))} after 10 rounds.`,
+        detail: `Rises and falls with the market: +10% in a boom, −8% in a slump. Averages about 4% a round.`,
         meta: "PAID OUT AT THE END",
         color: "#00A6A6",
+      };
+    case "insure":
+      return {
+        icon: "🛡️",
+        label: "Buy insurance",
+        detail: "Blocks your next lawsuit, layoff, tax audit or disaster. One use.",
+        meta: `COSTS ${money(o.cost)}`,
+        color: "#6C8EBF",
+      };
+    case "settle":
+      return { icon: "🤝", label: "Settle", detail: "Pay up and make it go away.", meta: `PAY ${money(o.amount)}`, color: "#8A94A6" };
+    case "fight":
+      return {
+        icon: "⚖️",
+        label: "Fight it in court",
+        detail: `A coin flip. Win and you pay nothing. Lose and it costs double.`,
+        meta: `50%: $0 · 50%: ${money(o.lose)}`,
+        color: "#E5383B",
       };
     case "skip":
       return { icon: "✋", label: o.label, detail: o.detail, color: "#C9CFD4" };

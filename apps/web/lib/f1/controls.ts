@@ -114,11 +114,11 @@ export class Controls {
       this.throttle = tThrottle;
       this.brake = tBrake;
     } else {
-      // Slower to wind on at speed, quick to unwind.
-      const wind = 5.2 - Math.min(3.4, speed * 0.045);
-      this.steer = move(this.steer, tSteer, wind, 9);
-      this.throttle = move(this.throttle, tThrottle, 6, 12);
-      this.brake = move(this.brake, tBrake, 7, 14);
+      // The wheel winds on more slowly at speed so a short tap is a small movement, and unwinds quickly.
+      const wind = Math.max(1.4, 3.2 - speed * 0.022);
+      this.steer = move(this.steer, tSteer, wind, 7);
+      this.throttle = move(this.throttle, tThrottle, 4, 10);
+      this.brake = move(this.brake, tBrake, 5, 10);
     }
     this.drs = drs;
     return { throttle: this.throttle, brake: this.brake, steer: this.steer, drs };

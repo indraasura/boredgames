@@ -52,7 +52,13 @@ export interface PlayerState {
   fund: number;
   invested: number;
   paydays: number;
+  /** One-shot cover against the next twist (lawsuit, layoff, audit or disaster). */
+  insured: boolean;
+  /** Paydays still to pass with no pay (after a layoff). */
+  unpaid: number;
 }
+
+export type Market = "boom" | "steady" | "slump";
 
 export type Option =
   | { type: "route"; path: PathInfo }
@@ -61,9 +67,12 @@ export type Option =
   | { type: "home"; home: Home }
   | { type: "rent" }
   | { type: "invest"; amount: number }
-  | { type: "skip"; label: string; detail: string };
+  | { type: "skip"; label: string; detail: string }
+  | { type: "insure"; cost: number }
+  | { type: "settle"; amount: number }
+  | { type: "fight"; lose: number };
 
-export type ChoiceKind = "route" | "branch" | "job" | "home" | "invest";
+export type ChoiceKind = "route" | "branch" | "job" | "home" | "invest" | "lawsuit";
 
 export interface Choice {
   kind: ChoiceKind;
@@ -85,6 +94,8 @@ export interface MilestonesState {
   turnCount: number;
   /** Everyone has had this many turns. The Growth Fund and homes grow once per round. */
   round: number;
+  /** The mood of the market; moves the Growth Fund and home values each round. */
+  market: Market;
 }
 
 export type Move = { type: "spin" } | { type: "choose"; index: number };

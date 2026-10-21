@@ -1,4 +1,5 @@
 import { Rng } from "@boredgames/engine";
+import { Aids, type AidLevel } from "./aids";
 import { Driver, pitOffset, type Obstacle, type PitPath } from "./ai";
 import { CAR, COMPOUNDS, DEFAULT_SETUP, TEAMS, clampSetup, randomSetup, tune, type Compound, type Setup, type Team, type Tuned } from "./car";
 import { planFor, racingOffsets, type Plan } from "./line";
@@ -342,7 +343,7 @@ export class Race {
     } else if (c.driver) {
       input = this.aiDrive(c, dt);
     } else {
-      input = c.input;
+      input = this.humanDrive(c, dt);
       this.checkPitEntry(c);
     }
 
@@ -524,6 +525,36 @@ export class Race {
     const tempF = Math.max(0.6, 1 - 0.25 * x * x);
     const wearF = 1 - 0.22 * avgWear - 3 * Math.max(0, avgWear - 0.75) ** 2;
     return tempF * wearF;
+  }
+
+  private aids = new Map<string, Aids>();
+  private assistLevel: AidLevel = "standard";
+
+  /** How much help the people on this computer get. */
+  setAssist(level: AidLevel) {
+    this.assistLevel = level;
+    for (const a of this.aids.values()) a.setLevel(level);
+  }
+
+  /** What the driver's help is doing for this car right now. */
+  aidReport(c: RaceCar) {
+    return this.aids.get(c.id)?.report ?? { braking: false, steering: false };
+  }
+
+  /** The racing line and speeds for a car, for drawing guidance on the road. */
+  linePlan(c: RaceCar): Plan {
+    return this.planFor(c);
+  }
+
+  /** What a person asked for, turned into what the car does. */
+  private humanDrive(c: RaceCar, dt: number): Input {
+    let a = this.aids.get(c.id);
+    const plan = this.planFor(c);
+    if (!a) {
+      a = new Aids(this.track, plan, this.assistLevel);
+      this.aids.set(c.id, a);
+    } else a.setPlan(plan);
+    return a.apply(c.input, c.state, c.tuned, this.env, this.gripScale(c), dt);
   }
 
   private aiDrive(c: RaceCar, dt: number): Input {

@@ -62,6 +62,16 @@ export const RULES = {
   fundAmounts: [50, 100],
   /** Home value growth per round, times the home's own growth factor. */
   homeRate: 0.015,
+  /** Growth Fund change per round in each market mood. */
+  fundRates: { boom: 0.1, steady: 0.04, slump: -0.08 },
+  /** Home values move by homeRate times this, per mood. */
+  homeMult: { boom: 1.6, steady: 1, slump: -1.6 },
+  insuranceCost: 15,
+  /** Chance of winning in court. Losing costs double the settlement. */
+  fightOdds: 0.5,
+  /** Chance that an Event / Bills tile turns into a twist. */
+  twistOnEvent: 0.35,
+  twistOnBills: 0.3,
   /** Salary used to price bills while a player has none. */
   billFloor: 40,
 } as const;

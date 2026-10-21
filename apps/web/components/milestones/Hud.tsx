@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { RULES, TILE_INFO, getBoard, getMap, netWorth, type PlayerState, type TileType } from "@boredgames/milestones";
+import { TILE_INFO, getBoard, getMap, netWorth, type PlayerState, type TileType } from "@boredgames/milestones";
 import { audio, type AudioPrefs } from "@/lib/milestones/audio";
 import { money, pegColors, type Seat, type ViewState } from "@/lib/milestones/controller";
 import s from "./milestones.module.css";
@@ -112,6 +112,12 @@ export function TileGuide({ mapId }: { mapId: string }) {
 
 // ---------------------------------------------------------------- players
 
+const MARKET_LOOK = {
+  boom: { icon: "🚀", label: "Boom (+10%)", color: "#2FBF71" },
+  steady: { icon: "➖", label: "Steady (+4%)", color: "#8A94A6" },
+  slump: { icon: "📉", label: "Slump (−8%)", color: "#E5383B" },
+} as const;
+
 function PlayerCard({ seat, p, active, compact, you }: { seat: Seat; p: PlayerState; active: boolean; compact: boolean; you: boolean }) {
   const pegs = pegColors(seat, p);
   return (
@@ -134,8 +140,18 @@ function PlayerCard({ seat, p, active, compact, you }: { seat: Seat; p: PlayerSt
         <span className={s.chip}>{p.career ? `${p.career} · ${money(p.salary)}` : p.route ? "Studying" : "Picking a road"}</span>
         <span className={s.chip}>{p.home ? p.home.name : "No home yet"}</span>
         {p.fund > 0 && (
-          <span className={`${s.chip} ${s.chipInvest}`} title={`Growth Fund: grows ${RULES.fundRate * 100}% every round`}>
+          <span className={`${s.chip} ${s.chipInvest}`} title="Growth Fund: moves with the market every round">
             📈 Fund {money(p.fund)}
+          </span>
+        )}
+        {p.insured && (
+          <span className={s.chip} title="Blocks your next lawsuit, layoff, audit or disaster">
+            🛡️ Insured
+          </span>
+        )}
+        {p.unpaid > 0 && (
+          <span className={s.chip} title="Your next paydays pay nothing">
+            ⚠️ Laid off · {p.unpaid} paydays unpaid
           </span>
         )}
       </div>
@@ -157,6 +173,15 @@ export function Players({ view }: { view: ViewState }) {
   const compact = view.game.players.length > 2;
   return (
     <div className={s.players}>
+      <div
+        className={`${s.card} ${s.cardCompact} ${s.glass}`}
+        title="The market moves every Growth Fund and home value each round"
+        style={{ borderLeft: `4px solid ${MARKET_LOOK[view.game.market].color}` }}
+      >
+        <span className={s.pname}>
+          {MARKET_LOOK[view.game.market].icon} Market: {MARKET_LOOK[view.game.market].label}
+        </span>
+      </div>
       {view.game.players.map((p, i) => (
         <PlayerCard
           key={p.id}

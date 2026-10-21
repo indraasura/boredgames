@@ -2,7 +2,7 @@ import { Rng, err, ok, type GameEvent, type PlayerId, type Result } from "@bored
 import { nextNode } from "./board";
 import { BILLS, HOMES_BY_MAP, JOBS, MAP_EVENTS, RULES, SHARED_EVENTS } from "./content";
 import { getBoard, getMap } from "./maps";
-import type { Choice, Home, JobTier, MilestonesConfig, MilestonesState, Move, Option, PlayerState } from "./types";
+import type { Choice, Home, JobTier, Market, MilestonesConfig, MilestonesState, Move, Option, PlayerState } from "./types";
 
 export function setup(ctx: {
   players: { id: PlayerId; name: string }[];
@@ -30,6 +30,8 @@ export function setup(ctx: {
     fund: 0,
     invested: 0,
     paydays: 0,
+    insured: false,
+    unpaid: 0,
   }));
   const state: MilestonesState = {
     map: def.id,
@@ -40,6 +42,7 @@ export function setup(ctx: {
     rng: new Rng(ctx.seed).state,
     turnCount: 0,
     round: 1,
+    market: "steady",
   };
   beginTurn(state, []);
   return state;
@@ -121,7 +124,7 @@ function beginTurn(s: MilestonesState, events: GameEvent[]): void {
   s.choice = null;
 }
 
-function endTurn(s: MilestonesState, events: GameEvent[]): void {
+function endTurn(s: MilestonesState, rng: Rng, events: GameEvent[]): void {
   s.choice = null;
   if (s.players.every((p) => p.retired)) return finish(s, events);
   let wrapped = false;
@@ -129,7 +132,7 @@ function endTurn(s: MilestonesState, events: GameEvent[]): void {
     s.turn = (s.turn + 1) % s.players.length;
     if (s.turn === 0) wrapped = true;
   } while (currentPlayer(s).retired);
-  if (wrapped) tickRound(s, events);
+  if (wrapped) tickRound(s, rng, events);
   beginTurn(s, events);
 }
 
@@ -154,14 +157,33 @@ function settle(p: PlayerState, events: GameEvent[]): void {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-/** Once everyone has had a turn, the Growth Fund and every home grow a little. */
-function tickRound(s: MilestonesState, events: GameEvent[]): void {
+/** Moods tend to swing back: slumps are often followed by booms and the reverse. */
+const MARKET_NEXT: Record<Market, readonly [Market, number][]> = {
+  steady: [["boom", 0.25], ["slump", 0.25], ["steady", 0.5]],
+  boom: [["boom", 0.3], ["slump", 0.25], ["steady", 0.45]],
+  slump: [["slump", 0.25], ["boom", 0.35], ["steady", 0.4]],
+};
+
+/** Once everyone has had a turn, the market moves and with it the Growth Fund and every home. */
+function tickRound(s: MilestonesState, rng: Rng, events: GameEvent[]): void {
   s.round++;
-  for (const p of s.players) {
-    if (p.fund > 0) p.fund = round1(p.fund * (1 + RULES.fundRate));
-    if (p.home) p.home.value = round1(p.home.value * (1 + RULES.homeRate * p.home.growth));
+  let roll = rng.next();
+  let next: Market = s.market;
+  for (const [m, w] of MARKET_NEXT[s.market]) {
+    next = m;
+    if ((roll -= w) < 0) break;
   }
-  events.push({ type: "round", round: s.round });
+  s.market = next;
+  moveMarket(s, RULES.fundRates[next], RULES.homeRate * RULES.homeMult[next]);
+  events.push({ type: "round", round: s.round, market: next, change: RULES.fundRates[next] });
+}
+
+/** Every Growth Fund moves by `fundPct` and every home by `homePct` x its own growth factor. */
+function moveMarket(s: MilestonesState, fundPct: number, homePct: number): void {
+  for (const p of s.players) {
+    if (p.fund > 0) p.fund = round1(Math.max(0, p.fund * (1 + fundPct)));
+    if (p.home) p.home.value = round1(Math.max(1, p.home.value * (1 + homePct * p.home.growth)));
+  }
 }
 
 // -------------------------------------------------------------------- spin
@@ -191,6 +213,11 @@ function spin(s: MilestonesState, rng: Rng, events: GameEvent[]): void {
 }
 
 function collectPay(p: PlayerState, node: number, passing: boolean, events: GameEvent[]): void {
+  if (p.unpaid > 0 && p.salary > 0) {
+    p.unpaid--;
+    events.push({ type: "payday", player: p.id, node, passing, amount: 0, laidOff: true });
+    return;
+  }
   if (p.salary <= 0) {
     events.push({ type: "payday", player: p.id, node, passing, amount: 0 });
     return;
@@ -213,28 +240,31 @@ function land(s: MilestonesState, p: PlayerState, rng: Rng, events: GameEvent[])
   switch (node.type) {
     case "payday":
       collectPay(p, node.id, false, events);
-      return endTurn(s, events);
+      return endTurn(s, rng, events);
 
     case "event": {
+      if (rng.next() < RULES.twistOnEvent) return twist(s, p, true, rng, events);
       const e = rng.pick([...SHARED_EVENTS, ...(MAP_EVENTS[s.map] ?? [])]);
       p.cash += e.cash;
       events.push({ type: "card", player: p.id, kicker: "LIFE EVENT", text: e.text, amount: e.cash });
       settle(p, events);
-      return endTurn(s, events);
+      return endTurn(s, rng, events);
     }
 
     case "bills": {
+      if (rng.next() < RULES.twistOnBills) return twist(s, p, false, rng, events);
       const bill = rng.pick(BILLS);
       const base = Math.max(RULES.billFloor, p.salary);
       const amount = Math.max(10, Math.round((base * bill.rate) / 5) * 5);
       p.cash -= amount;
       events.push({ type: "card", player: p.id, kicker: "BILLS", text: bill.text, amount: -amount });
       settle(p, events);
-      return endTurn(s, events);
+      return endTurn(s, rng, events);
     }
 
     case "invest": {
       const options: Option[] = RULES.fundAmounts.filter((a) => a <= p.cash).map((amount) => ({ type: "invest", amount }));
+      if (!p.insured && p.cash >= RULES.insuranceCost) options.push({ type: "insure", cost: RULES.insuranceCost });
       if (options.length === 0) {
         events.push({
           type: "card",
@@ -243,15 +273,15 @@ function land(s: MilestonesState, p: PlayerState, rng: Rng, events: GameEvent[])
           text: "You have no cash to invest.",
           amount: 0,
         });
-        return endTurn(s, events);
+        return endTurn(s, rng, events);
       }
       options.push({ type: "skip", label: "Not now", detail: "Keep your cash." });
       return openChoice(
         s,
         {
           kind: "invest",
-          title: "Invest in the Growth Fund?",
-          text: "Money in the Growth Fund grows 4% every round and is paid out at the end.",
+          title: "Invest, or cover yourself?",
+          text: `The market is ${MOOD[s.market]}. The Growth Fund rises and falls with it and is paid out at the end. Insurance blocks your next twist.`,
           then: "endTurn",
           options,
         },
@@ -264,7 +294,7 @@ function land(s: MilestonesState, p: PlayerState, rng: Rng, events: GameEvent[])
       const added = twins ? 2 : 1;
       p.kids += added;
       events.push({ type: "family", player: p.id, added, twins });
-      return endTurn(s, events);
+      return endTurn(s, rng, events);
     }
 
     case "graduate":
@@ -274,7 +304,7 @@ function land(s: MilestonesState, p: PlayerState, rng: Rng, events: GameEvent[])
       p.spouse = true;
       p.cash += RULES.weddingGift;
       events.push({ type: "wedding", player: p.id, gift: RULES.weddingGift });
-      return endTurn(s, events);
+      return endTurn(s, rng, events);
 
     case "house": {
       const homes = rng.sample(HOMES_BY_MAP[s.map] ?? HOMES_BY_MAP["sunny-isle"]!, 2);
@@ -317,11 +347,128 @@ function land(s: MilestonesState, p: PlayerState, rng: Rng, events: GameEvent[])
       p.retired = true;
       p.retiredFirst = !s.players.some((o) => o !== p && o.retired);
       events.push({ type: "retired", player: p.id, first: p.retiredFirst });
-      return endTurn(s, events);
+      return endTurn(s, rng, events);
 
     default:
-      return endTurn(s, events);
+      return endTurn(s, rng, events);
   }
+}
+
+// ------------------------------------------------------------------ twists
+
+const MOOD: Record<Market, string> = { boom: "booming (+10% a round)", steady: "steady (+4% a round)", slump: "in a slump (−8% a round)" };
+
+type TwistKind = "lawsuit" | "layoff" | "audit" | "disaster" | "crash" | "boom" | "windfall" | "scandal";
+const BAD_TWISTS: readonly TwistKind[] = ["lawsuit", "layoff", "audit", "disaster"];
+
+/** 0 = richest. */
+function standing(s: MilestonesState, p: PlayerState): number {
+  return s.players.filter((o) => o !== p && netWorth(o) > netWorth(p)).length;
+}
+
+const round5 = (n: number) => Math.round(n / 5) * 5;
+
+/**
+ * A twist replaces an ordinary Event / Bills card. Bad ones bite the leader harder and good ones
+ * favour whoever is behind, so a lead is never safe and a bad start is never hopeless.
+ */
+function twist(s: MilestonesState, p: PlayerState, anyKind: boolean, rng: Rng, events: GameEvent[]): void {
+  const behind = s.players.length > 1 && standing(s, p) === s.players.length - 1;
+  const ahead = s.players.length > 1 && standing(s, p) === 0;
+  const weights: [TwistKind, number][] = [
+    ["lawsuit", ahead ? 4 : 3],
+    ["layoff", p.salary > 0 && p.unpaid === 0 ? 2 : 0],
+    ["audit", ahead ? 4 : behind ? 0 : 2],
+    ["disaster", 2],
+  ];
+  if (anyKind) {
+    weights.push(["crash", 1.5], ["boom", 1.5], ["windfall", behind ? 6 : 3], ["scandal", ahead ? 0 : behind ? 4 : 2]);
+  }
+  const total = weights.reduce((sum, [, w]) => sum + w, 0);
+  let roll = rng.next() * total;
+  let kind = weights[0]![0];
+  for (const [k, w] of weights) {
+    if (w > 0) kind = k;
+    if ((roll -= w) < 0) break;
+  }
+
+  const net = Math.max(0, netWorth(p));
+  const card = (kicker: string, text: string, amount: number) => events.push({ type: "card", player: p.id, kicker, text, amount, twist: true });
+
+  if (BAD_TWISTS.includes(kind) && p.insured) {
+    p.insured = false;
+    events.push({ type: "card", player: p.id, kicker: "INSURED", text: `Your insurance absorbed a ${kind}.`, amount: 0, twist: true });
+    return endTurn(s, rng, events);
+  }
+
+  switch (kind) {
+    case "lawsuit": {
+      const amount = Math.max(20, round5(p.salary * 0.3 + net * 0.08));
+      return openChoice(
+        s,
+        {
+          kind: "lawsuit",
+          title: "You are being sued",
+          text: `Settle quietly, or fight it? Even odds in court: win and you pay nothing, lose and you pay double.`,
+          then: "endTurn",
+          options: [
+            { type: "settle", amount },
+            { type: "fight", lose: amount * 2 },
+          ],
+        },
+        events,
+      );
+    }
+    case "layoff":
+      p.unpaid = 2;
+      p.cash += 10;
+      card("LAYOFF", "Restructuring. Your next two paydays are skipped. Severance covers a little.", 10);
+      break;
+    case "audit": {
+      const amount = Math.max(15, round5(net * 0.1));
+      p.cash -= amount;
+      card("TAX AUDIT", "Back taxes, plus penalties.", -amount);
+      settle(p, events);
+      break;
+    }
+    case "disaster":
+      if (p.home) {
+        const loss = Math.round(p.home.value * 0.15);
+        p.home.value = round1(p.home.value - loss);
+        card("DISASTER", `Storm damage to your ${p.home.name.toLowerCase()}. Its value drops.`, -loss);
+      } else {
+        const amount = 25;
+        p.cash -= amount;
+        card("DISASTER", "Your landlord’s pipes burst. You pay for the move.", -amount);
+        settle(p, events);
+      }
+      break;
+    case "crash":
+      s.market = "slump";
+      moveMarket(s, -0.12, 0);
+      events.push({ type: "market", player: p.id, market: "slump", headline: "Flash crash! Every Growth Fund drops 12%." });
+      break;
+    case "boom":
+      s.market = "boom";
+      moveMarket(s, 0.1, 0);
+      events.push({ type: "market", player: p.id, market: "boom", headline: "Market rally! Every Growth Fund jumps 10%." });
+      break;
+    case "windfall": {
+      const amount = behind ? 90 : 40;
+      p.cash += amount;
+      card(behind ? "COMEBACK" : "WINDFALL", behind ? "An angel investor backs your side project." : "A long-lost relative remembers you.", amount);
+      break;
+    }
+    case "scandal": {
+      const leader = s.players.filter((o) => o !== p).sort((a, b) => netWorth(b) - netWorth(a))[0]!;
+      const take = Math.min(40, leader.cash);
+      leader.cash -= take;
+      p.cash += take;
+      card("SCANDAL", `${leader.name} is caught in a scandal and you pick up ${take > 0 ? `$${take}k` : "the pieces"}.`, take);
+      break;
+    }
+  }
+  endTurn(s, rng, events);
 }
 
 // ------------------------------------------------------------------ choices
@@ -396,11 +543,38 @@ function choose(s: MilestonesState, index: number, rng: Rng, events: GameEvent[]
       events.push({ type: "invested", player: p.id, amount: option.amount });
       break;
 
+    case "insure":
+      p.cash -= option.cost;
+      p.insured = true;
+      events.push({ type: "insured", player: p.id, cost: option.cost });
+      break;
+
+    case "settle":
+      p.cash -= option.amount;
+      events.push({ type: "card", player: p.id, kicker: "SETTLED", text: "You settled out of court.", amount: -option.amount, twist: true });
+      settle(p, events);
+      break;
+
+    case "fight": {
+      const won = rng.next() < RULES.fightOdds;
+      if (!won) p.cash -= option.lose;
+      events.push({
+        type: "card",
+        player: p.id,
+        kicker: won ? "CASE DISMISSED" : "LOST IN COURT",
+        text: won ? "The judge threw it out. You pay nothing." : "The jury sided against you.",
+        amount: won ? 0 : -option.lose,
+        twist: true,
+      });
+      settle(p, events);
+      break;
+    }
+
     case "rent":
     case "skip":
       break;
   }
 
   if (choice.then === "spin") s.phase = "spin";
-  else endTurn(s, events);
+  else endTurn(s, rng, events);
 }
