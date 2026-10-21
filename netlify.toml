@@ -1,0 +1,7 @@
+# The site is a static export of apps/web (Next.js output: "export"), so Netlify only has to serve the built folder.
+[build]
+  command = "pnpm install --frozen-lockfile && pnpm --filter @boredgames/web build"
+  publish = "apps/web/out"
+
+[build.environment]
+  NODE_VERSION = "22"
