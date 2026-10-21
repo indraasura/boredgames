@@ -78,6 +78,8 @@ export interface RaceCar {
   skill: number;
   /** Grid slot offset from the centre line. */
   gridLat: number;
+  /** For a car driven elsewhere: how far its last snapshot says it is from where we draw it, bled off smoothly. */
+  corr: { x: number; y: number; psi: number };
 }
 
 export type RaceEvent =
@@ -222,6 +224,7 @@ export class Race {
       impact: 0,
       skill,
       gridLat: lat,
+      corr: { x: 0, y: 0, psi: 0 },
     };
     if (!entry.human && !remote) car.driver = new Driver(t, this.planFor(car), { skill, aggression: 0.5 });
     this.cars.push(car);
@@ -306,6 +309,15 @@ export class Race {
     s.x += (s.u * cp - s.v * sp) * dt;
     s.y += (s.u * sp + s.v * cp) * dt;
     s.psi += s.r * dt;
+    // Ease towards the latest snapshot over about a tenth of a second instead of jumping to it.
+    const k = 1 - Math.exp(-dt / 0.1);
+    const cr = c.corr;
+    s.x += cr.x * k;
+    s.y += cr.y * k;
+    s.psi += cr.psi * k;
+    cr.x -= cr.x * k;
+    cr.y -= cr.y * k;
+    cr.psi -= cr.psi * k;
   }
 
   private stepLocal(c: RaceCar, dt: number, racing: boolean) {
@@ -745,13 +757,20 @@ export class Race {
     const c = this.cars.find((x) => x.id === id);
     if (!c || !c.remote) return;
     const s = c.state;
-    const k = 0.45;
-    s.x += (snap.x - s.x) * k;
-    s.y += (snap.y - s.y) * k;
     let dp = snap.psi - s.psi;
     while (dp > Math.PI) dp -= 2 * Math.PI;
     while (dp < -Math.PI) dp += 2 * Math.PI;
-    s.psi += dp * k;
+    const ex = snap.x - s.x;
+    const ey = snap.y - s.y;
+    if (Math.hypot(ex, ey) > 12 || Math.abs(dp) > 1) {
+      // Too far to glide (a reset, or a burst of lost packets): place it.
+      s.x = snap.x;
+      s.y = snap.y;
+      s.psi = snap.psi;
+      c.corr = { x: 0, y: 0, psi: 0 };
+    } else {
+      c.corr = { x: ex, y: ey, psi: dp };
+    }
     s.u = snap.u;
     s.v = snap.v;
     s.r = snap.r;

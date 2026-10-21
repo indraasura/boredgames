@@ -294,6 +294,13 @@ export function gap(t: Track, a: number, b: number): number {
   return d;
 }
 
+/** Uniform Catmull-Rom: passes through p1 at u=0 and p2 at u=1 with a continuous slope. */
+export function catmullRom(p0: number, p1: number, p2: number, p3: number, u: number): number {
+  const u2 = u * u;
+  const u3 = u2 * u;
+  return 0.5 * (2 * p1 + (p2 - p0) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u2 + (3 * p1 - p0 - 3 * p2 + p3) * u3);
+}
+
 export function trackAt(t: Track, s: number): { x: number; y: number; heading: number; kappa: number; nx: number; ny: number } {
   const f = wrapS(t, s) / t.ds;
   const i = Math.floor(f) % t.n;
@@ -303,9 +310,12 @@ export function trackAt(t: Track, s: number): { x: number; y: number; heading: n
   while (dh > Math.PI) dh -= 2 * Math.PI;
   while (dh < -Math.PI) dh += 2 * Math.PI;
   const h = t.heading[i]! + dh * u;
+  // Catmull-Rom between samples, so a point moving along the lap has no kinks every 4 m.
+  const a = (i + t.n - 1) % t.n;
+  const b = (j + 1) % t.n;
   return {
-    x: t.x[i]! + (t.x[j]! - t.x[i]!) * u,
-    y: t.y[i]! + (t.y[j]! - t.y[i]!) * u,
+    x: catmullRom(t.x[a]!, t.x[i]!, t.x[j]!, t.x[b]!, u),
+    y: catmullRom(t.y[a]!, t.y[i]!, t.y[j]!, t.y[b]!, u),
     heading: h,
     kappa: t.kappa[i]! + (t.kappa[j]! - t.kappa[i]!) * u,
     nx: -Math.sin(h),

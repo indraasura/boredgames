@@ -45,6 +45,8 @@ export class Driver {
   private extra = 0;
   /** Offset from the line being used to get past a slower car, metres. */
   private integral = 0;
+  /** Smoothed pedal output: a real driver does not move the pedals in steps. */
+  private pedalOut = 0;
 
   constructor(
     private track: Track,
@@ -144,6 +146,14 @@ export class Driver {
       brake = 1;
     }
     this.integral = 0;
+    // The pedals move smoothly, within about 70 ms (a stab of brake is quicker), and one pedal signal stops
+    // throttle and brake fighting each other. The wheel is not filtered: lag in the steering loop makes it weave.
+    const want = throttle - brake;
+    const kp = 1 - Math.exp(-dt / (want < this.pedalOut - 0.2 ? 0.03 : 0.07));
+    this.pedalOut += (want - this.pedalOut) * kp;
+    if (pit?.stop) this.pedalOut = -1;
+    throttle = Math.max(0, this.pedalOut);
+    brake = Math.max(0, -this.pedalOut);
     return {
       input: { throttle, brake, steer: delta / MAX_STEER, drs: false, steerAssist: false, tractionControl: true },
       s,

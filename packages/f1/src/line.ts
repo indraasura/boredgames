@@ -1,6 +1,6 @@
 import { CAR, COMPOUNDS, wetGrip, type Compound, type Tuned } from "./car";
 import { G } from "./physics";
-import type { Track } from "./track";
+import { catmullRom, type Track } from "./track";
 
 /** A racing line and the speed a car can carry along it. Used by the computer drivers and for reference lap times. */
 export interface Plan {
@@ -166,5 +166,6 @@ export function sampleAt(arr: Float64Array, ds: number, s: number, length: numbe
   const f = (((s % length) + length) % length) / ds;
   const i = Math.floor(f) % n;
   const u = f - Math.floor(f);
-  return arr[i]! + (arr[(i + 1) % n]! - arr[i]!) * u;
+  // Smooth between samples: a linear blend has a corner at every sample, which a driver feels as a twitch.
+  return catmullRom(arr[(i + n - 1) % n]!, arr[i]!, arr[(i + 1) % n]!, arr[(i + 2) % n]!, u);
 }

@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { DEFAULT_SETUP, DRIVER_NAMES, TEAMS, clampSetup, fillGrid, type AidLevel, type Entry, type RaceConfig } from "@boredgames/f1";
 import { F1Controller, type Hud } from "@/lib/f1/controller";
+import type { CameraMode } from "@/lib/f1/scene/F1Scene";
 import { GuestNet, HostNet, fromLite, toLite, type ConfigLite, type F1Msg, type Net } from "@/lib/f1/net";
 import { JoinFlow } from "../shared/Invite";
-import { SetupPanel, TeamGrid, TyrePicker, type CarSel } from "./CarPicker";
+import { SetupPanel, TeamGrid, TyrePicker, suggestedCompound, type CarSel } from "./CarPicker";
 import { CarPanel, Dash, Lights, Messages, Minimap, PauseCard, ResultsCard, Times, Tower, TopBar, TouchControls, WeatherChip } from "./Hud";
 import Menu, { type StartConfig } from "./Menu";
 import s from "./f1.module.css";
@@ -32,6 +33,10 @@ function readQuery() {
     ai: q.has("ai") ? Math.max(0, Math.min(19, Number(q.get("ai")))) : null,
     weather: q.get("weather"),
     fast: q.get("fast") === "1",
+    // Attract mode, for demos and filming: the computer drives your car, with a chosen camera and no HUD.
+    demo: q.get("demo") === "1",
+    cam: q.get("cam"),
+    hud: q.get("hud") !== "0",
     seed: q.has("seed") ? Number(q.get("seed")) >>> 0 : null,
   };
 }
@@ -53,9 +58,9 @@ function arrange(humans: Entry[], ai: Entry[], seed: number): Entry[] {
   return out;
 }
 
-function makeRun(cfg: StartConfig, fast: boolean, net: Net | null, guests: { entry: Entry }[] = []): Run {
+function makeRun(cfg: StartConfig, fast: boolean, net: Net | null, guests: { entry: Entry }[] = [], demo = false): Run {
   const seed = newSeed();
-  const me: Entry = { id: "p0", name: cfg.name, team: cfg.car.team, setup: cfg.car.setup, compound: cfg.car.compound, human: true };
+  const me: Entry = { id: "p0", name: cfg.name, team: cfg.car.team, setup: cfg.car.setup, compound: cfg.car.compound, human: !demo };
   const others = guests.map((g) => g.entry);
   const humans = [me, ...others];
   const grid = fillGrid(humans, humans.length + cfg.opponents, seed, cfg.weather);
@@ -78,13 +83,13 @@ export default function F1Game() {
         weather: (query.weather as StartConfig["weather"]) ?? "clear",
         difficulty: "medium",
         opponents: query.ai ?? 9,
-        car: { team: TEAMS[0]!, compound: "medium", setup: { ...DEFAULT_SETUP } },
+        car: { team: TEAMS[0]!, compound: suggestedCompound((query.weather as StartConfig["weather"]) ?? "clear"), setup: { ...DEFAULT_SETUP } },
         name: "You",
         assist: "standard",
         friends: null,
         room: null,
       };
-      return { k: "play", run: { ...makeRun(cfg, query.fast, null), nonce: 1 } };
+      return { k: "play", run: { ...makeRun(cfg, query.fast, null, [], query.demo), nonce: 1 } };
     }
     return { k: "menu" };
   });
@@ -225,6 +230,7 @@ function Game({ run, onQuit, onAgain, onRestartFromHost }: { run: Run; onQuit():
   const [error, setError] = useState(false);
   const net = run.net;
   const isGuest = net?.role === "guest";
+  const [showHud] = useState(() => new URLSearchParams(window.location.search).get("hud") !== "0");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -237,6 +243,7 @@ function Game({ run, onQuit, onAgain, onRestartFromHost }: { run: Run; onQuit():
         assist: run.assist,
         fast: run.fast,
         quality: window.devicePixelRatio > 2 || window.innerWidth < 700 ? "low" : "high",
+        camera: (new URLSearchParams(window.location.search).get("cam") as CameraMode | null) ?? undefined,
       });
       c.attach(canvas);
       setCtl(c);
@@ -271,7 +278,7 @@ function Game({ run, onQuit, onAgain, onRestartFromHost }: { run: Run; onQuit():
   return (
     <div className={s.root}>
       <canvas ref={canvasRef} className={s.canvas} role="img" aria-label="The race, seen from behind the car" />
-      {ctl && hud.standings && (
+      {ctl && hud.standings && showHud && (
         <>
           <Tower hud={hud} />
           <TopBar hud={hud} />

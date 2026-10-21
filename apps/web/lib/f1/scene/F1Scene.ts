@@ -540,7 +540,7 @@ export class F1Scene {
       const speed = Math.hypot(f.u, f.v);
       const rollT = Math.max(-0.05, Math.min(0.05, (f.ay ?? 0) * 0.0016));
       const pitchT = Math.max(-0.04, Math.min(0.04, (f.ax ?? 0) * 0.0007));
-      const k = Math.min(1, dt * 9);
+      const k = 1 - Math.exp(-dt * 9);
       m.roll += (rollT - m.roll) * k;
       m.pitch += (pitchT - m.pitch) * k;
       m.rig.group.rotation.x = m.roll;
@@ -618,11 +618,21 @@ export class F1Scene {
     }
   }
 
-  /** The shadow follows the focus car, snapped so it does not shimmer. */
+  /**
+   * The shadow follows the focus car. It moves in whole shadow-map texels, measured across the light, so
+   * the shadows of things standing still do not crawl or shimmer as the car drives on.
+   */
   private updateSun() {
-    const snap = (v: number) => Math.round(v / 2) * 2;
+    const d = this.world.sunDir.clone().normalize();
+    const right = new THREE.Vector3(0, 1, 0).cross(d).normalize();
+    const up = d.clone().cross(right).normalize();
+    const cam = this.sun.shadow.camera;
+    const texel = (cam.right - cam.left) / this.sun.shadow.mapSize.x;
     const f = this.focusPos;
-    this.sun.target.position.set(snap(f.x), 0, snap(f.z));
+    const a = Math.round(f.dot(right) / texel) * texel;
+    const b = Math.round(f.dot(up) / texel) * texel;
+    const c = f.dot(d);
+    this.sun.target.position.copy(right.multiplyScalar(a)).addScaledVector(up, b).addScaledVector(d, c);
     this.sun.position.copy(this.sun.target.position).addScaledVector(this.world.sunDir, 280);
     this.sun.target.updateMatrixWorld();
   }
@@ -687,7 +697,8 @@ export class F1Scene {
       this.camYaw = f.psi;
       this.camInit = true;
     } else {
-      this.camYaw += dy * Math.min(1, dt * (this.mode === "cockpit" ? 60 : 4.5));
+      // Exponential smoothing: the same feel at any frame rate.
+      this.camYaw += dy * (1 - Math.exp(-dt * (this.mode === "cockpit" ? 60 : 5)));
     }
     const yaw = this.camYaw;
     const fx = Math.cos(yaw);
@@ -697,7 +708,7 @@ export class F1Scene {
     let fov = 62;
     // The horizon leans into corners a little.
     const rollT = this.mode === "top" ? 0 : Math.max(-0.05, Math.min(0.05, -(f.ay ?? 0) * 0.0012));
-    this.roll += (rollT - this.roll) * Math.min(1, dt * 4);
+    this.roll += (rollT - this.roll) * (1 - Math.exp(-dt * 4));
     if (this.mode === "chase") {
       target.set(x - fx * 8.2, 2.6 + Math.min(0.6, speed * 0.003), z - fz * 8.2);
       look.set(x + fx * 16, 0.95, z + fz * 16);
@@ -720,19 +731,23 @@ export class F1Scene {
       fov = 52;
     }
     if (this.mode === "cockpit") this.camPos.copy(target);
-    else this.camPos.lerp(target, Math.min(1, dt * 12));
+    else this.camPos.lerp(target, 1 - Math.exp(-dt * (this.mode === "top" ? 6 : 14)));
     this.shake = Math.max(this.shake - dt * 3, f.impact);
     const rumble = this.mode === "cockpit" || this.mode === "close" ? Math.min(0.02, speed * 0.00008) : 0;
     const shakeAmt = this.shake * 0.6 + rumble + (f.offTrack ? Math.min(0.12, speed * 0.002) : 0);
     this.camera.position.copy(this.camPos);
     if (shakeAmt > 0.001) {
-      this.camera.position.x += (Math.random() - 0.5) * shakeAmt;
-      this.camera.position.y += (Math.random() - 0.5) * shakeAmt;
+      // Layered sines: a rumble that moves smoothly, rather than a new random offset every frame.
+      const tt = this.time;
+      this.camera.position.x += (Math.sin(tt * 37.1) * 0.6 + Math.sin(tt * 61.7 + 1.3) * 0.4) * shakeAmt * 0.5;
+      this.camera.position.y += (Math.sin(tt * 43.3 + 0.7) * 0.6 + Math.sin(tt * 71.9 + 2.1) * 0.4) * shakeAmt * 0.5;
     }
-    this.camera.up.set(Math.sin(this.roll), Math.cos(this.roll), 0);
+    this.camera.up.set(0, 1, 0);
     this.camera.lookAt(look);
+    // Lean the horizon around the direction of view, not a fixed world axis.
+    if (this.roll) this.camera.rotateZ(this.roll);
     if (Math.abs(this.camera.fov - fov) > 0.05) {
-      this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 4);
+      this.camera.fov += (fov - this.camera.fov) * (1 - Math.exp(-dt * 4));
       this.camera.updateProjectionMatrix();
     }
   }

@@ -105,6 +105,7 @@ export interface ControllerOptions {
   net?: Net | null;
   assist: AidLevel;
   fast?: boolean;
+  camera?: CameraMode;
   quality?: "low" | "high";
 }
 
@@ -144,6 +145,8 @@ export class F1Controller {
   private fastest = 0;
   private lastSend = 0;
   private lastAiSend = 0;
+  /** Each car as it was before the latest physics step, so drawing can blend between steps. */
+  private prevPose = new Map<string, { x: number; y: number; psi: number; delta: number }>();
   private weatherKind: string;
   private offNet: (() => void) | null = null;
   private results: ResultRow[] | null = null;
@@ -160,6 +163,7 @@ export class F1Controller {
     this.race = new Race(config);
     this.race.setAssist(opts.assist);
     this.track = this.race.track;
+    if (opts.camera && ["chase", "close", "cockpit", "top"].includes(opts.camera)) this.camera = opts.camera;
     this.controls = new Controls(() => !this.paused && !this.menu);
     this.controls.onAction((a) => this.action(a));
     this.pitCompound = recommendedTyre(this.race.weather.wetness, config.laps);
@@ -417,6 +421,7 @@ export class F1Controller {
       this.acc += this.opts.fast ? dt * 4 : dt;
       let steps = 0;
       while (this.acc >= DT && steps < 14) {
+        this.capturePoses();
         this.race.step(DT);
         this.acc -= DT;
         steps++;
@@ -428,14 +433,22 @@ export class F1Controller {
 
     // ---- draw
     if (this.scene) {
+      // The physics runs at 120 Hz and the screen at whatever it likes (60, 144, 165 Hz...). Drawing the
+      // latest step as is makes the car judder when the two drift; blend between the last two steps instead.
+      const alpha = Math.min(1, Math.max(0, this.acc / DT));
       const frames: CarFrame[] = this.race.cars.map((c) => {
         const s = c.state;
+        const p = this.prevPose.get(c.id);
+        const blend = !!p && Math.abs(s.x - p.x) + Math.abs(s.y - p.y) < 8;
+        let dpsi = blend ? s.psi - p!.psi : 0;
+        while (dpsi > Math.PI) dpsi -= 2 * Math.PI;
+        while (dpsi < -Math.PI) dpsi += 2 * Math.PI;
         return {
           id: c.id,
-          x: s.x,
-          y: s.y,
-          psi: s.psi,
-          delta: s.delta,
+          x: blend ? p!.x + (s.x - p!.x) * alpha : s.x,
+          y: blend ? p!.y + (s.y - p!.y) * alpha : s.y,
+          psi: blend ? p!.psi + dpsi * alpha : s.psi,
+          delta: blend ? p!.delta + (s.delta - p!.delta) * alpha : s.delta,
           u: s.u,
           v: s.v,
           throttle: s.throttle,
@@ -458,6 +471,18 @@ export class F1Controller {
 
     if (++this.frame % 4 === 0 || this.race.phase !== this.hud.phase || this.race.lights !== this.hud.lights) this.publish();
   };
+
+  private capturePoses() {
+    for (const c of this.race.cars) {
+      const s = c.state;
+      let p = this.prevPose.get(c.id);
+      if (!p) this.prevPose.set(c.id, (p = { x: 0, y: 0, psi: 0, delta: 0 }));
+      p.x = s.x;
+      p.y = s.y;
+      p.psi = s.psi;
+      p.delta = s.delta;
+    }
+  }
 
   /** The racing line on the road: shown when the driver has help turned on. */
   private updateGuide() {
