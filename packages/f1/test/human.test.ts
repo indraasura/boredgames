@@ -48,7 +48,7 @@ function humanLap(id: string, level: AidLevel | "legacy", seed: number, reaction
       const d = target - v;
       return Math.abs(d) <= rate * DT ? target : v + Math.sign(d) * rate * DT;
     };
-    steer = move(steer, k.steer, Math.max(1.4, 3.2 - V * 0.022), 7);
+    steer = move(steer, k.steer, 5, 7);
     th = move(th, k.th, 4, 10);
     br = move(br, k.br, 5, 10);
     let input: Input;

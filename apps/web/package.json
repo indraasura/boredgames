@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@boredgames/banners": "workspace:*",
     "@boredgames/engine": "workspace:*",
     "@boredgames/f1": "workspace:*",
     "@boredgames/milestones": "workspace:*",

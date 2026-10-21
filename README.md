@@ -7,6 +7,7 @@ open a game and play. The site builds to static files (`output: "export"`).
 |---|---|
 | **Milestones** (3D life-path game) | Play against 1-3 computers, or invite up to 3 friends. 4 maps, sound and music |
 | **Grand Prix** (F1-style racing) | 40 real circuits, car physics, tyres, setup, weather. Free ride, vs computers, or friends |
+| **Banners** (medieval strategy) | 2-4 houses build armies, forge and break alliances, and fight for 7 crowns. vs computers or friends |
 | Mancala, Pachisi, Depth Charge | Not built yet |
 
 ## Run it
@@ -40,6 +41,17 @@ URL options on the game page (when `map` is set the lobby is skipped):
 - **Friends:** same room-code flow as Milestones. Each browser simulates its own car and sends it 30 times a second; the host drives the computer cars.
 - URL options: `/games/f1?track=it-1922&mode=race&laps=3&ai=9&weather=rain` (`mode=free` for free ride, `fast=1` for tests).
 
+## Banners
+
+- **The realm:** 26 provinces on one continent (Voronoi cells clipped to a hand-drawn coast, built by `packages/banners/scripts/gen-map.mjs`). Seven are crown cities: four capitals and three in the heartland.
+- **A turn:** collect gold (provinces plus a royal levy; autumn pays half again), raise troops at castles and crown cities (at most 3 a turn), march. Footmen 2g, archers 3g (+1 defending), knights 4g (+1 attacking, ride two provinces). Castles cost 6g: a third defence die, and a place to raise troops.
+- **Battle:** Risk-style dice, fought out automatically; ties go to the defender; hills and an allied army next door help defenders; an attack falls back after losing two thirds.
+- **Diplomacy:** envoys, one ally at a time, gifts of gold, and betrayal (costs prestige, and the other house will not trust you for 3 rounds).
+- **Winning:** 4 crowns alone or 5 with an ally at the end of a round; otherwise the best score after 8, 12 or 16 rounds.
+- **Tidings each round:** harvests, sellswords, storms that close a province, plague.
+- Computer lords plan converging attacks, defend threatened strongholds, and court, keep and betray allies. Balance is checked by bot-only wars in the tests.
+- URL options: `/games/banners?houses=4&skill=hard` (add `watch=1` to let the computer play your house, `fast=1` to hurry).
+
 ## Layout
 
 ```
@@ -47,6 +59,7 @@ apps/web                  Next.js app (home page, game pages, 3D scene)
 packages/engine           game contract + seeded RNG (pure TypeScript)
 packages/milestones       rules, maps, content, bots, tests (pure TypeScript)
 packages/f1               circuits, car physics, racing line, computer drivers, race rules (pure TypeScript)
+packages/banners          realm map, war rules, computer lords, tests (pure TypeScript)
 ```
 
 Rules are pure functions with no UI or I/O. Each game is a `GameDefinition` in `packages/engine`.

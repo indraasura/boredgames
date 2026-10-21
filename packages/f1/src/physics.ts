@@ -137,6 +137,20 @@ export function steerLimit(speed: number, assist: boolean, ayLimit: number, L: n
   return Math.min(MAX_STEER, peakSlip + (L * ayLimit) / Math.max(speed * speed, 100));
 }
 
+/** Engine map: pedal progression in the low gears, and torque caps for first, second and third. */
+const TQ_CURVE = 1.6;
+const TQ_G1 = 0.7;
+const TQ_G2 = 0.82;
+const TQ_G3 = 0.92;
+/** Rear side grip left at full wheelspin, and how fast it goes. */
+const SPIN_MIN = 0.82;
+const SPIN_K = 0.3;
+/**
+ * The rear tyres are a third wider than the fronts (405 mm against 305 mm), so the rear has more grip. That is
+ * what makes the car settle into gentle understeer at the limit instead of swapping ends.
+ */
+const FRONT_GRIP = 0.96;
+const REAR_GRIP = 1.08;
 const B_STIFF = 17;
 const C_SHAPE = 1.5;
 const RELAX = 0.35;
@@ -228,7 +242,7 @@ export function stepCar(c: CarState, t: Tuned, input: Input, env: Env, surface: 
     const w = c.wear[i]!;
     const wearF = 1 - 0.22 * w - 3 * Math.max(0, w - 0.75) ** 2;
     const load = Math.min(1.3, Math.max(0.6, 1 - 0.16 * (Fz[i]! / 4500 - 1)));
-    mu[i] = comp.mu * tempF * wearF * wetF * t.camberGrip * t.pressureGrip * load * (surface[i] ?? 1);
+    mu[i] = comp.mu * (front ? FRONT_GRIP : REAR_GRIP) * tempF * wearF * wetF * t.camberGrip * t.pressureGrip * load * (surface[i] ?? 1);
     Fmax[i] = mu[i]! * Fz[i]!;
     Fy[i] = -Fmax[i]! * Math.sin(C_SHAPE * Math.atan(B_STIFF * c.alpha[i]!));
     slipLat[i] = vc;
@@ -259,7 +273,11 @@ export function stepCar(c: CarState, t: Tuned, input: Input, env: Env, surface: 
   let drive = 0;
   const speed = Math.max(c.u, 0);
   if (throttle > 0.01 && c.shift <= 0) {
-    const iceT = ((CAR.icePower * powerShape(rpm) * t.power) / omega) * throttle;
+    // Engine map: the pedal is progressive, and the low gears are torque-limited, as on the real cars, so a
+    // stab of throttle out of a slow corner does not light up the rears.
+    const curve = Math.pow(throttle, c.gear <= 3 ? TQ_CURVE : 1.15);
+    const gearCap = c.gear === 1 ? TQ_G1 : c.gear === 2 ? TQ_G2 : c.gear === 3 ? TQ_G3 : 1;
+    const iceT = ((CAR.icePower * powerShape(rpm) * t.power) / omega) * curve * gearCap;
     let ersT = 0;
     if (c.ers > 0 && throttle > 0.6) {
       const p = ersPower(speed);
@@ -309,7 +327,8 @@ export function stepCar(c: CarState, t: Tuned, input: Input, env: Env, surface: 
     }
     // Without traction control, asking for more than the tyre has left costs lateral grip too.
     const over = demand - (fl + fr);
-    if (!input.tractionControl && over > 0) wheelSpinScale = Math.max(0.55, 1 - over / (demand + 1) * 0.5);
+    // Spinning the rears costs some side grip, progressively, so a slide on the power can be caught.
+    if (!input.tractionControl && over > 0) wheelSpinScale = Math.max(SPIN_MIN, 1 - (over / (demand + 1)) * SPIN_K);
     Fx[2] = Fx[2]! + fl;
     Fx[3] = Fx[3]! + fr;
   } else if (drive < 0) {

@@ -6,7 +6,8 @@ import type { Track } from "./track";
 
 /**
  * How much help the driver gets.
- * - pro: the steering wheel is wired straight to the front wheels, like the physics.
+ * - pro: no help. The steering still asks for cornering force (so the same push turns the car the same at any
+ *   speed), but nothing catches slides, nothing brakes for you, and there is no traction control.
  * - standard: the steering asks for cornering force instead of wheel angle, the car is held stable,
  *   and the brakes step in when you are far too fast for a corner.
  * - full: as standard, and the car also eases back towards the racing line when you are not steering.
@@ -16,12 +17,12 @@ export type AidLevel = "pro" | "standard" | "full";
 export const AID_LEVELS: readonly { id: AidLevel; name: string; blurb: string }[] = [
   { id: "full", name: "Full", blurb: "Keeps the car on the racing line and brakes for corners. Just steer and press go." },
   { id: "standard", name: "Standard", blurb: "Smooth, stable steering and braking help. You choose the line." },
-  { id: "pro", name: "Pro", blurb: "No help. The wheel is wired to the tyres." },
+  { id: "pro", name: "Pro", blurb: "No traction control, no braking or slide help. You control the car." },
 ];
 
 /** Per-level tuning: how much cornering force full input asks for, how hard the car is pulled onto the line when the wheel is let go, and how brave the braking help is. */
 const TUNING = {
-  pro: { authority: 1, line: 0, skill: 1 },
+  pro: { authority: 1.1, line: 0, skill: 1 },
   standard: { authority: 0.65, line: 0.75, skill: 0.92 },
   full: { authority: 0.65, line: 0.88, skill: 0.88 },
 } as const;
@@ -77,12 +78,6 @@ export class Aids {
   }
 
   apply(raw: RawInput, c: CarState, k: Tuned, env: Env, gripScale: number, dt: number): Input {
-    if (this.level === "pro") {
-      this.report = { braking: false, steering: false };
-      return { ...raw, steerAssist: false, tractionControl: false };
-    }
-
-    const cfg = TUNING[this.level];
     const V = Math.hypot(c.u, c.v);
     const L = k.a + k.b;
     const m = k.mass0 + Math.max(0, c.fuel);
@@ -93,6 +88,8 @@ export class Aids {
     const q = 0.5 * env.rho * V * V;
     const df = q * (k.clAf + k.clAr);
     const ayLimit = (muEst * (m * G + df)) / m;
+
+    const cfg = TUNING[this.level];
 
     // ---- the ghost: where the racing line is, and how fast to be
     const g = this.ghost.drive(c, dt, [], gripScale);
@@ -111,8 +108,8 @@ export class Aids {
     if (Math.abs(sIn) < 0.02) this.trim *= Math.max(0, 1 - 6 * dt);
     let delta = dFF + this.trim + 0.045 * (rDes - c.r) * Math.min(1, V / 25);
 
-    // Catch a sliding rear before it becomes a spin.
-    if (V > 8) {
+    // Catch a sliding rear before it becomes a spin (not in pro: a slide is yours to catch).
+    if (V > 8 && this.level !== "pro") {
       const betaRear = Math.atan2(c.v - k.b * c.r, Math.max(c.u, 5));
       delta -= clamp(betaRear * 0.75, -0.14, 0.14);
     }
@@ -140,7 +137,7 @@ export class Aids {
     let throttle = raw.throttle;
     const gb = g.input.brake;
     let braking = false;
-    if (gb > 0.12 && V > 12) {
+    if (gb > 0.12 && V > 12 && this.level !== "pro") {
       const take = this.level === "full" ? 1 : 0.8;
       if (gb * take > brake) {
         brake = gb * take;
@@ -151,7 +148,7 @@ export class Aids {
     else if (this.level === "full") throttle = Math.min(throttle, g.input.throttle + 0.3);
 
     this.report = { braking, steering };
-    return { throttle, brake, steer: clamp(delta / MAX_STEER, -1, 1), drs: raw.drs, steerAssist: false, tractionControl: true };
+    return { throttle, brake, steer: clamp(delta / MAX_STEER, -1, 1), drs: raw.drs, steerAssist: false, tractionControl: this.level !== "pro" };
   }
 }
 

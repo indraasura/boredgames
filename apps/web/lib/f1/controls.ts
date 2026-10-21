@@ -114,8 +114,8 @@ export class Controls {
       this.throttle = tThrottle;
       this.brake = tBrake;
     } else {
-      // The wheel winds on more slowly at speed so a short tap is a small movement, and unwinds quickly.
-      const wind = Math.max(1.4, 3.2 - speed * 0.022);
+      // Full input is "as much cornering as the tyres give" at any speed, so the wheel can wind on briskly.
+      const wind = 5;
       this.steer = move(this.steer, tSteer, wind, 7);
       this.throttle = move(this.throttle, tThrottle, 4, 10);
       this.brake = move(this.brake, tBrake, 5, 10);

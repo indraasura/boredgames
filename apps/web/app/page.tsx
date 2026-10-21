@@ -92,7 +92,7 @@ export default function Home() {
         <section id="shelf" className={s.section}>
           <div className={s.sectionHead}>
             <h2 className={s.h2}>Games</h2>
-            <span className="mono">2 playable, 3 coming</span>
+            <span className="mono">3 playable, 3 coming</span>
           </div>
 
           <div className={s.shelf}>
@@ -154,6 +154,38 @@ export default function Home() {
                   <span className={s.tag}>Friends by room code</span>
                 </div>
                 <Link href="/games/f1" className={s.cta}>
+                  <span>Play</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </article>
+
+            <article className={s.card}>
+              <div className={s.art} aria-hidden="true">
+                <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 40%, #efe3c4, #d9c393 75%)" }}>
+                  <svg viewBox="0 0 200 120" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+                    <path d="M30 60 C 30 30, 70 18, 100 24 S 175 26, 172 60 S 140 100, 100 98 S 30 92, 30 60Z" fill="#ecdfbd" stroke="#2b1d12" strokeWidth="2" />
+                    <path d="M100 24 L96 60 L60 80 M96 60 L140 78 M96 60 L150 40" fill="none" stroke="#2b1d12" strokeWidth="1" strokeDasharray="3 2" />
+                    <path d="M34 60 C 34 34 70 22 98 26 L95 60 L58 80 C 40 76 34 70 34 60Z" fill="#8e1b1b" fillOpacity="0.35" />
+                    <path d="M150 40 C 165 46 170 54 168 62 L140 78 L96 60 Z" fill="#1f3f7a" fillOpacity="0.35" />
+                    <path d="M92 44 H98 V36 H104 V44 H110 V56 H92Z" fill="#e2bd62" stroke="#2b1d12" strokeWidth="1" />
+                    <path d="M62 52 V34" stroke="#2b1d12" strokeWidth="1.6" /><path d="M62 34 H78 L74 39 L78 44 H62Z" fill="#8e1b1b" stroke="#2b1d12" strokeWidth="0.8" />
+                    <path d="M140 62 V44" stroke="#2b1d12" strokeWidth="1.6" /><path d="M140 44 H156 L152 49 L156 54 H140Z" fill="#1f3f7a" stroke="#2b1d12" strokeWidth="0.8" />
+                  </svg>
+                </div>
+              </div>
+              <div className={s.cardBody}>
+                <div className={s.cardTitle}>
+                  <h3 style={{ fontFamily: "Georgia, serif", fontWeight: 700, letterSpacing: "0.06em", color: "#2b1d12" }}>Banners</h3>
+                  <span className="mono">2–4 houses</span>
+                </div>
+                <p className={s.desc}>A war of crowns. Raise footmen, archers and knights, march on your rivals, swear alliances and break them. Take four of the seven crowns, or rule together.</p>
+                <div className={s.tags}>
+                  <span className={s.tag}>Strategy</span>
+                  <span className={s.tag}>vs Computer</span>
+                  <span className={s.tag}>Friends by room code</span>
+                </div>
+                <Link href="/games/banners" className={s.cta}>
                   <span>Play</span>
                   <span aria-hidden="true">→</span>
                 </Link>

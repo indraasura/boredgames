@@ -27,4 +27,5 @@ Milestones: the host runs the computer players and relays moves; every browser a
 
 - **Milestones** (done): spin, drive a 3D map, a few choices, retire richest. 4 maps, 3 bot skill levels, synthesised sound.
 - **Grand Prix** (done): real-time racing on 40 circuits; physics and race rules in `packages/f1`, 3D in `apps/web/lib/f1`. Friends connect browser to browser; each browser simulates its own car and streams it, the host runs the computer cars.
+- **Banners** (done): medieval strategy for 2-4 houses; pure rules in `packages/banners`, an SVG war map in `apps/web/components/banners`. Same move-relay networking as Milestones.
 - **Mancala**, **Pachisi**, **Depth Charge**: not started. Each is a new `packages/<game>` plus a route.
