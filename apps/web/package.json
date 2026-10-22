@@ -9,10 +9,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@boredgames/banners": "workspace:*",
     "@boredgames/engine": "workspace:*",
     "@boredgames/f1": "workspace:*",
     "@boredgames/milestones": "workspace:*",
+    "@boredgames/quickdraw": "workspace:*",
     "next": "^16.4.2",
     "peerjs": "^1.5.5",
     "react": "^19.3.1",

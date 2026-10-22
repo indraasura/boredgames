@@ -162,30 +162,42 @@ export default function Home() {
 
             <article className={s.card}>
               <div className={s.art} aria-hidden="true">
-                <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 40%, #efe3c4, #d9c393 75%)" }}>
-                  <svg viewBox="0 0 200 120" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
-                    <path d="M30 60 C 30 30, 70 18, 100 24 S 175 26, 172 60 S 140 100, 100 98 S 30 92, 30 60Z" fill="#ecdfbd" stroke="#2b1d12" strokeWidth="2" />
-                    <path d="M100 24 L96 60 L60 80 M96 60 L140 78 M96 60 L150 40" fill="none" stroke="#2b1d12" strokeWidth="1" strokeDasharray="3 2" />
-                    <path d="M34 60 C 34 34 70 22 98 26 L95 60 L58 80 C 40 76 34 70 34 60Z" fill="#8e1b1b" fillOpacity="0.35" />
-                    <path d="M150 40 C 165 46 170 54 168 62 L140 78 L96 60 Z" fill="#1f3f7a" fillOpacity="0.35" />
-                    <path d="M92 44 H98 V36 H104 V44 H110 V56 H92Z" fill="#e2bd62" stroke="#2b1d12" strokeWidth="1" />
-                    <path d="M62 52 V34" stroke="#2b1d12" strokeWidth="1.6" /><path d="M62 34 H78 L74 39 L78 44 H62Z" fill="#8e1b1b" stroke="#2b1d12" strokeWidth="0.8" />
-                    <path d="M140 62 V44" stroke="#2b1d12" strokeWidth="1.6" /><path d="M140 44 H156 L152 49 L156 54 H140Z" fill="#1f3f7a" stroke="#2b1d12" strokeWidth="0.8" />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#2a1640 0%,#8a2f45 42%,#f08a3e 70%,#ffc56a 80%)" }}>
+                  <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMax slice" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+                    <circle cx="100" cy="80" r="26" fill="#ffe7a0" />
+                    <path d="M0 84 L20 84 L26 72 L52 71 L56 84 L140 85 L146 74 L172 73 L176 85 L200 84 V120 H0Z" fill="#5e2340" />
+                    <path d="M0 92 H200 V120 H0Z" fill="#b56d3b" />
+                    <path d="M92 92 V62 h16 V92z M90 62 h20 l-10 -10z" fill="#2b1426" />
+                    <g fill="#1a0c12">
+                      <ellipse cx="44" cy="70" rx="9" ry="1.6" />
+                      <path d="M38 70 q1 -6 6 -6 q5 0 6 6z" />
+                      <circle cx="44" cy="73.5" r="3.2" />
+                      <path d="M39 77 h10 l1 12 h-12z" />
+                      <path d="M40 89 l-3 11 h3 l3 -10 l3 10 h3 l-3 -11z" />
+                      <path d="M48 79 l14 -1 v2 l-14 1z" />
+                      <ellipse cx="156" cy="70" rx="9" ry="1.6" />
+                      <path d="M150 70 q1 -6 6 -6 q5 0 6 6z" />
+                      <circle cx="156" cy="73.5" r="3.2" />
+                      <path d="M151 77 h10 l1 12 h-12z" />
+                      <path d="M152 89 l-3 11 h3 l3 -10 l3 10 h3 l-3 -11z" />
+                      <path d="M152 79 l-3 9 h2 l3 -8z" />
+                    </g>
+                    <path d="M63 79 h4" stroke="#fff3c0" strokeWidth="1.6" />
                   </svg>
                 </div>
               </div>
               <div className={s.cardBody}>
                 <div className={s.cardTitle}>
-                  <h3 style={{ fontFamily: "Georgia, serif", fontWeight: 700, letterSpacing: "0.06em", color: "#2b1d12" }}>Banners</h3>
-                  <span className="mono">2–4 houses</span>
+                  <h3 style={{ fontFamily: "Georgia, serif", fontWeight: 700, letterSpacing: "0.04em", color: "#a3241a" }}>Quick Draw</h3>
+                  <span className="mono">2 players</span>
                 </div>
-                <p className={s.desc}>A war of crowns. Raise footmen, archers and knights, march on your rivals, swear alliances and break them. Take four of the seven crowns, or rule together.</p>
+                <p className={s.desc}>A wild west duel. Wait for the call, ignore the fake-outs, then shoot first. Five outlaws to bring in, or settle it with a friend.</p>
                 <div className={s.tags}>
-                  <span className={s.tag}>Strategy</span>
                   <span className={s.tag}>vs Computer</span>
+                  <span className={s.tag}>Same keyboard</span>
                   <span className={s.tag}>Friends by room code</span>
                 </div>
-                <Link href="/games/banners" className={s.cta}>
+                <Link href="/games/quickdraw" className={s.cta}>
                   <span>Play</span>
                   <span aria-hidden="true">→</span>
                 </Link>

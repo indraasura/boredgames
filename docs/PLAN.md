@@ -19,7 +19,7 @@ Consequences:
 
 ## Playing with friends
 
-The host opens a room and gets a 6 digit code; friends type it to join. Game data goes browser to browser over WebRTC. We run no server, but two free public services help: the PeerJS broker (introduces the two browsers by room code, never sees game traffic) and a public STUN server (Google, for finding a route through home routers). If either is down, rooms cannot be opened. Connections that need a relay (strict corporate networks) will fail. Code: `apps/web/lib/p2p.ts`; per-game messages in `lib/milestones/net.ts` and `lib/f1/net.ts`.
+The host opens a room and gets a 6 digit code; friends type it to join. Game data goes browser to browser over WebRTC. We run no server, but two free public services help: the PeerJS broker (introduces the two browsers by room code, never sees game traffic) and a public STUN server (Google, for finding a route through home routers). If either is down, rooms cannot be opened. Connections that need a relay (strict corporate networks) will fail. Code: `apps/web/lib/p2p.ts`; per-game messages in `lib/milestones/net.ts`, `lib/f1/net.ts` and `lib/quickdraw/net.ts`.
 
 Milestones: the host runs the computer players and relays moves; every browser applies the same moves to the same seeded game. Grand Prix: every browser simulates its own car and streams it; the host runs the computer cars.
 
@@ -27,5 +27,5 @@ Milestones: the host runs the computer players and relays moves; every browser a
 
 - **Milestones** (done): spin, drive a 3D map, a few choices, retire richest. 4 maps, 3 bot skill levels, synthesised sound.
 - **Grand Prix** (done): real-time racing on 40 circuits; physics and race rules in `packages/f1`, 3D in `apps/web/lib/f1`. Friends connect browser to browser; each browser simulates its own car and streams it, the host runs the computer cars.
-- **Banners** (done): medieval strategy for 2-4 houses; pure rules in `packages/banners`, an SVG war map in `apps/web/components/banners`. Same move-relay networking as Milestones.
+- **Quick Draw** (done): a two-player wild west reaction duel; round plans and judging in `packages/quickdraw`, an SVG street in `apps/web/components/quickdraw`. Each browser times its own player; the host judges the round.
 - **Mancala**, **Pachisi**, **Depth Charge**: not started. Each is a new `packages/<game>` plus a route.
