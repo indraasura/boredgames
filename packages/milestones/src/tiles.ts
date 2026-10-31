@@ -39,7 +39,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   payday: {
     name: "Payday",
-    color: "#2FBF71",
+    color: "#4F9D69",
     icon: "💰",
     short: "Get paid. Landing on or passing one counts.",
     long: "You get your salary every time you land on or pass a payday.",
@@ -48,7 +48,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   event: {
     name: "Life event",
-    color: "#FFD60A",
+    color: "#F2C14E",
     icon: "✨",
     short: "A card. Usually cash, but 1 in 3 is a twist.",
     long: "Draw a card. Most give a little cash, a few cost some, and some are twists: lawsuits, layoffs, market crashes, comebacks.",
@@ -57,7 +57,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   bills: {
     name: "Bills",
-    color: "#8A94A6",
+    color: "#A39E93",
     icon: "🧾",
     short: "Pay a bill, or face a nasty surprise.",
     long: "Taxes, repairs, the dentist. Bigger salaries pay bigger bills, and sometimes it is a lawsuit, an audit or a layoff.",
@@ -66,7 +66,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   invest: {
     name: "Market",
-    color: "#00A6A6",
+    color: "#2A9D8F",
     icon: "📈",
     short: "Invest in the market, buy insurance, or skip.",
     long: "Put cash in the Growth Fund or buy insurance against the next twist. The fund rises and falls with the market and is paid out at the end.",
@@ -75,7 +75,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   baby: {
     name: "Family",
-    color: "#FF8FC7",
+    color: "#EF9FB4",
     icon: "👶",
     short: "Stop. A baby joins you (20% chance of twins). Worth $50k at the end.",
     long: "You must stop here. A baby joins your car. Each child adds $50k to your final score.",
@@ -84,7 +84,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   graduate: {
     name: "Job board",
-    color: "#8B5A2B",
+    color: "#A0703C",
     icon: "🎓",
     short: "Stop. Pick a job from three offers.",
     long: "You must stop here. Pick one of three jobs. More training means better offers.",
@@ -93,7 +93,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   wedding: {
     name: "Wedding",
-    color: "#E5383B",
+    color: "#D94F3D",
     icon: "💍",
     short: "Stop. Get married and receive $20k in gifts.",
     long: "You must stop here. You get married, your guests give gifts, and a spouse joins your car.",
@@ -102,7 +102,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   house: {
     name: "Home",
-    color: "#1E88E5",
+    color: "#3F7CC6",
     icon: "🏠",
     short: "Stop. Buy a home, or skip it.",
     long: "You must stop here. A home gains value every round and is sold when you retire. If you are short, the bank lends in $50k chunks.",
@@ -111,7 +111,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   fork: {
     name: "Crossroads",
-    color: "#2D3FE0",
+    color: "#5B57C9",
     icon: "🧭",
     short: "Stop. Choose a road.",
     long: "You must stop here. The road splits: one way has more paydays, the other more Market tiles.",
@@ -120,7 +120,7 @@ export const TILE_INFO: Record<TileType, TileInfo> = {
   },
   retire: {
     name: "Retirement",
-    color: "#1B1F2A",
+    color: "#161512",
     icon: "🏖️",
     short: "Stop. The first to retire earns a bonus.",
     long: "You must stop here and retire. Your Growth Fund keeps growing until everyone has finished.",

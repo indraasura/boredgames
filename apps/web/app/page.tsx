@@ -1,281 +1,274 @@
 import Link from "next/link";
+import { MAP_LIST } from "@boredgames/milestones";
+import { HeroWheel } from "@/components/home/HeroWheel";
+import { Reveal } from "@/components/home/Reveal";
 import s from "./home.module.css";
 
-const ROAD: { x: number; y: number; c: string; big?: boolean }[] = [
-  { x: 30, y: 44, c: "#F5D061" },
-  { x: 35, y: 49, c: "#7BC47F" },
-  { x: 40.5, y: 52, c: "#F5D061" },
-  { x: 46, y: 51, c: "#E2665C", big: true },
-  { x: 51.5, y: 48, c: "#F29BB8" },
-  { x: 57, y: 47, c: "#F5D061" },
-  { x: 62, y: 50, c: "#7BC47F" },
-  { x: 65, y: 56, c: "#6FA8DC", big: true },
-  { x: 60, y: 61, c: "#F5D061" },
-  { x: 54, y: 63, c: "#F29BB8" },
-  { x: 48, y: 62, c: "#E8B04B", big: true },
-];
-
-function Logo() {
+function Mark({ size = 28 }: { size?: number }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-      <rect x="1" y="1" width="26" height="26" rx="7" fill="#0A0A0A" />
-      <circle cx="9" cy="9" r="2.4" fill="#F7F7F5" />
-      <circle cx="14" cy="14" r="2.4" fill="#F7F7F5" />
-      <circle cx="19" cy="19" r="2.4" fill="#F7F7F5" />
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden="true">
+      <rect x="1" y="1" width="26" height="26" rx="7" fill="currentColor" />
+      <circle cx="9" cy="9" r="2.4" fill="var(--paper)" />
+      <circle cx="14" cy="14" r="2.4" fill="var(--paper)" />
+      <circle cx="19" cy="19" r="2.4" fill="var(--paper)" />
     </svg>
   );
 }
 
-function Workshop({ title, font, color, art, players, blurb, tags, note }: {
-  title: string;
-  font: string;
-  color: string;
-  art: React.ReactNode;
-  players: string;
-  blurb: string;
-  tags: string[];
-  note: string;
-}) {
+function Arrow({ size = 18 }: { size?: number }) {
   return (
-    <article className={s.card}>
-      <div className={s.art} aria-hidden="true">{art}</div>
-      <div className={s.cardBody}>
-        <div className={s.cardTitle}>
-          <h3 style={{ fontFamily: font, color }}>{title}</h3>
-          <span className="mono">{players}</span>
-        </div>
-        <p className={s.desc}>{blurb}</p>
-        <div className={s.tags}>
-          {tags.map((t) => (
-            <span key={t} className={s.tag}>{t}</span>
-          ))}
-        </div>
-        <div className={s.soon}>
-          <span>Coming soon</span>
-          <span className="mono" style={{ textTransform: "none" }}>{note}</span>
-        </div>
-      </div>
-    </article>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
   );
 }
 
+function Star() {
+  return (
+    <svg className={s.star} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="currentColor" />
+    </svg>
+  );
+}
+
+const TICKER = ["Spin the wheel", "Get a job", "Buy a home", "Start a family", "Ride the market", "Dodge the lawsuit", "Retire richest"];
+
+const STEPS = [
+  { n: "01", title: "Spin", text: "The wheel says how far you drive. Paydays, bills and surprises line the road." },
+  { n: "02", title: "Choose", text: "A handful of real decisions: which road, which job, which home, how much to invest." },
+  { n: "03", title: "Retire", text: "The first to retire gets a bonus. When everyone is done, the richest life wins." },
+];
+
+const PRINCIPLES = [
+  { k: "No account", v: "Nothing to sign up for. Open a game and play." },
+  { k: "Nothing saved", v: "No levels, no streaks, no history. Close the tab and it is gone." },
+  { k: "No server", v: "The whole site is static files. Friends connect browser to browser." },
+  { k: "Free", v: "No ads, no tracking, no in-game anything." },
+];
+
 export default function Home() {
   return (
-    <>
-      <header className={s.header}>
-        <nav className={s.nav} aria-label="Main">
-          <Link href="/" className={s.brand}>
-            <Logo />
-            boredgames
-          </Link>
-          <div className={s.links}>
-            <a href="#shelf" className={s.link}>Games</a>
-            <a href="#how" className={s.link}>About</a>
-          </div>
-          <div className={s.actions}>
-            <Link href="/games/milestones" className={s.pill}>Play Milestones</Link>
-          </div>
+    <div className={s.page}>
+      <header className={s.nav}>
+        <Link href="/" className={s.brand} aria-label="idleminds, home">
+          <Mark />
+          idleminds
+        </Link>
+        <nav className={s.links} aria-label="Main">
+          <a href="#milestones">Milestones</a>
+          <a href="#how">How it plays</a>
+          <a href="#about">About</a>
         </nav>
+        <Link href="/games/milestones" className={s.navCta}>
+          Play now
+          <Arrow size={16} />
+        </Link>
       </header>
 
       <main>
+        {/* ---------------------------------------------------------------- hero */}
         <section className={s.hero}>
-          <div className="mono">Board games for when you&apos;re bored</div>
-          <h1 className={s.h1}>Pick a game.</h1>
-          <div className={s.heroRow}>
-            <p className={s.lede}>
-              Board games that run in your browser. No account, no sign-up, nothing saved. Open one and play.
+          <div className={s.heroMeta}>
+            <span>(Index)</span>
+            <span>A tiny arcade for the browser</span>
+            <span>No account · No download · Nothing saved</span>
+          </div>
+          <h1 className={s.display}>
+            <span className={s.line}>
+              <span>Games for</span>
+            </span>
+            <span className={s.line}>
+              <span>
+                <em>idle</em> minds.
+              </span>
+            </span>
+          </h1>
+          <div className={s.heroFoot}>
+            <p className={s.lead}>
+              Board games you can start in a second and finish before you are bored again. Our first is <b>Milestones</b>: a whole life, one spin at a time.
             </p>
+            <HeroWheel />
+            <div className={s.heroCta}>
+              <Link href="/games/milestones" className={s.cta}>
+                <span>Play Milestones</span>
+                <span className={s.ctaDot}>
+                  <Arrow />
+                </span>
+              </Link>
+              <span className={s.small}>Free · 1–4 players · about 20 minutes</span>
+            </div>
           </div>
         </section>
 
-        <section id="shelf" className={s.section}>
-          <div className={s.sectionHead}>
-            <h2 className={s.h2}>Games</h2>
-            <span className="mono">3 playable, 3 coming</span>
-          </div>
-
-          <div className={s.shelf}>
-            <article className={`${s.card} ${s.featured}`}>
-              <div className={`${s.art} ${s.sky}`} aria-hidden="true">
-                <div className={s.sea} />
-                <div className={s.land} />
-                {ROAD.map((d, i) => (
-                  <span
-                    key={i}
-                    className={s.dot}
-                    style={{ left: `${d.x}%`, top: `${d.y}%`, background: d.c, width: d.big ? 22 : 16, height: d.big ? 12 : 9 }}
-                  />
+        {/* -------------------------------------------------------------- ticker */}
+        <div className={s.ticker} aria-hidden="true">
+          <div className={s.track}>
+            {[0, 1].map((k) => (
+              <span key={k} className={s.run}>
+                {TICKER.map((t) => (
+                  <span key={t} className={s.tick}>
+                    {t}
+                    <Star />
+                  </span>
                 ))}
-                <span className={s.tree} style={{ left: "33%", top: "38%", background: "#5FA35A" }} />
-                <span className={s.tree} style={{ left: "69%", top: "42%", background: "#7BBF6A" }} />
-                <span className={s.tree} style={{ left: "43%", top: "58%", background: "#6DB36B" }} />
-                <span style={{ position: "absolute", left: "47.5%", top: "41%", width: 18, height: 12, borderRadius: 4, background: "#E86F51", boxShadow: "0 3px 0 #B9503A" }} />
-                <span className={`mono ${s.badge}`}>3D</span>
-              </div>
-              <div className={s.cardBody}>
-                <div className={s.cardTitle}>
-                  <h3 style={{ fontFamily: "var(--font-fredoka)", fontWeight: 700, fontSize: 40, color: "#23303B" }}>Milestones</h3>
-                  <span className="mono">1–4 players</span>
-                </div>
-                <p className={s.desc} style={{ fontSize: 16, lineHeight: 1.55 }}>
-                  Spin, drive across the map and live a whole life: pick a job, buy a home, start a family, invest. Whoever retires with the most money wins. Four maps, solo or with friends.
-                </p>
-                <div className={s.tags}>
-                  <span className={s.tag}>vs Computer</span>
-                  <span className={s.tag}>Friends by room code</span>
-                  <span className={s.tag}>About 20 minutes</span>
-                </div>
-                <Link href="/games/milestones" className={s.cta}>
-                  <span>Play</span>
-                  <span aria-hidden="true">→</span>
-                </Link>
-              </div>
-            </article>
+              </span>
+            ))}
+          </div>
+        </div>
 
-            <article className={s.card}>
-              <div className={s.art} aria-hidden="true">
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#0d0f13,#1b1f27)" }}>
-                  <svg viewBox="0 0 200 120" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
-                    <path d="M40 90 C 30 50, 70 30, 100 40 S 170 30, 165 70 S 120 100, 90 85 S 55 105, 40 90Z" fill="none" stroke="#f2f4f8" strokeWidth="7" strokeLinejoin="round" />
-                    <path d="M40 90 C 30 50, 70 30, 100 40 S 170 30, 165 70 S 120 100, 90 85 S 55 105, 40 90Z" fill="none" stroke="#ff3b30" strokeWidth="1.6" strokeDasharray="5 7" />
-                  </svg>
-                </div>
-              </div>
-              <div className={s.cardBody}>
-                <div className={s.cardTitle}>
-                  <h3 style={{ fontFamily: "var(--font-inter-tight)", fontWeight: 800, color: "#0a0a0a" }}>Grand Prix</h3>
-                  <span className="mono">1–20 cars</span>
-                </div>
-                <p className={s.desc}>Drive 40 real circuits with real car physics. Choose tyres, tune the setup, pick the weather. Free ride, race the computer, or race friends.</p>
-                <div className={s.tags}>
-                  <span className={s.tag}>Free ride</span>
-                  <span className={s.tag}>vs Computer</span>
-                  <span className={s.tag}>Friends by room code</span>
-                </div>
-                <Link href="/games/f1" className={s.cta}>
-                  <span>Play</span>
-                  <span aria-hidden="true">→</span>
-                </Link>
-              </div>
-            </article>
+        {/* ---------------------------------------------------------- milestones */}
+        <section id="milestones" className={s.section}>
+          <Reveal className={s.sectionHead}>
+            <span className={s.index}>(01)</span>
+            <h2 className={s.h2}>
+              Now playing: <em>Milestones</em>
+            </h2>
+            <p className={s.sectionLead}>Drive a toy car across a 3D map and live a whole life on the way. Pick a job, buy a home, start a family, invest. Whoever retires with the most money wins.</p>
+          </Reveal>
 
-            <article className={s.card}>
-              <div className={s.art} aria-hidden="true">
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#2a1640 0%,#8a2f45 42%,#f08a3e 70%,#ffc56a 80%)" }}>
-                  <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMax slice" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
-                    <circle cx="100" cy="80" r="26" fill="#ffe7a0" />
-                    <path d="M0 84 L20 84 L26 72 L52 71 L56 84 L140 85 L146 74 L172 73 L176 85 L200 84 V120 H0Z" fill="#5e2340" />
-                    <path d="M0 92 H200 V120 H0Z" fill="#b56d3b" />
-                    <path d="M92 92 V62 h16 V92z M90 62 h20 l-10 -10z" fill="#2b1426" />
-                    <g fill="#1a0c12">
-                      <ellipse cx="44" cy="70" rx="9" ry="1.6" />
-                      <path d="M38 70 q1 -6 6 -6 q5 0 6 6z" />
-                      <circle cx="44" cy="73.5" r="3.2" />
-                      <path d="M39 77 h10 l1 12 h-12z" />
-                      <path d="M40 89 l-3 11 h3 l3 -10 l3 10 h3 l-3 -11z" />
-                      <path d="M48 79 l14 -1 v2 l-14 1z" />
-                      <ellipse cx="156" cy="70" rx="9" ry="1.6" />
-                      <path d="M150 70 q1 -6 6 -6 q5 0 6 6z" />
-                      <circle cx="156" cy="73.5" r="3.2" />
-                      <path d="M151 77 h10 l1 12 h-12z" />
-                      <path d="M152 89 l-3 11 h3 l3 -10 l3 10 h3 l-3 -11z" />
-                      <path d="M152 79 l-3 9 h2 l3 -8z" />
-                    </g>
-                    <path d="M63 79 h4" stroke="#fff3c0" strokeWidth="1.6" />
-                  </svg>
-                </div>
+          <Reveal className={s.feature}>
+            <Link href="/games/milestones" className={s.featureMedia} aria-label="Play Milestones">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/media/sunny-isle.jpg" alt="The Sunny Isle board: a road of coloured tiles winding across a green island" />
+              <span className={s.featureBadge}>
+                Play <Arrow size={16} />
+              </span>
+            </Link>
+            <dl className={s.facts}>
+              <div>
+                <dt>Players</dt>
+                <dd>1–4</dd>
               </div>
-              <div className={s.cardBody}>
-                <div className={s.cardTitle}>
-                  <h3 style={{ fontFamily: "Georgia, serif", fontWeight: 700, letterSpacing: "0.04em", color: "#a3241a" }}>Quick Draw</h3>
-                  <span className="mono">2 players</span>
-                </div>
-                <p className={s.desc}>A wild west duel. Wait for the call, ignore the fake-outs, then shoot first. Five outlaws to bring in, or settle it with a friend.</p>
-                <div className={s.tags}>
-                  <span className={s.tag}>vs Computer</span>
-                  <span className={s.tag}>Same keyboard</span>
-                  <span className={s.tag}>Friends by room code</span>
-                </div>
-                <Link href="/games/quickdraw" className={s.cta}>
-                  <span>Play</span>
-                  <span aria-hidden="true">→</span>
-                </Link>
+              <div>
+                <dt>Length</dt>
+                <dd>~20 min</dd>
               </div>
-            </article>
+              <div>
+                <dt>Maps</dt>
+                <dd>{MAP_LIST.length}</dd>
+              </div>
+              <div>
+                <dt>Opponents</dt>
+                <dd>
+                  Computer
+                  <br />
+                  or friends
+                </dd>
+              </div>
+            </dl>
+          </Reveal>
 
-            <Workshop
-              title="Mancala"
-              font="var(--font-inter-tight)"
-              color="#4E3122"
-              players="2 players"
-              blurb="Sow seeds around the board. Land in your store to go again, land in an empty pit to capture."
-              tags={["vs Computer"]}
-              note=""
-              art={
-                <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 20%, #F8F0E1, #E6D7BE 75%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 14, borderRadius: 60, background: "linear-gradient(170deg,#7A4E33,#4E3122)", boxShadow: "0 16px 30px -12px rgba(60,30,10,.6)" }}>
-                    <div style={{ width: 30, height: 90, borderRadius: 16, background: "#3A2317" }} />
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 8 }}>
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <div key={i} style={{ width: 32, height: 32, borderRadius: "50%", background: "#3A2317" }} />
-                      ))}
-                    </div>
-                    <div style={{ width: 30, height: 90, borderRadius: 16, background: "#3A2317" }} />
-                  </div>
-                </div>
-              }
-            />
-            <Workshop
-              title="Pachisi"
-              font="serif"
-              color="#1F3B73"
-              players="2–4 players"
-              blurb="Roll, race your pieces home, and send rivals back to the start."
-              tags={["vs Computer"]}
-              note=""
-              art={<div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle,#27498C,#142850 80%)" }} />}
-            />
-            <Workshop
-              title="Depth Charge"
-              font="monospace"
-              color="#0B5A35"
-              players="2 players"
-              blurb="Hide your fleet, then find theirs with sonar pings."
-              tags={["vs Computer"]}
-              note=""
-              art={<div style={{ position: "absolute", inset: 0, background: "#03110D" }} />}
-            />
+          <div className={s.maps}>
+            {MAP_LIST.map((m, i) => (
+              <Reveal key={m.id} className={s.mapCard} delay={i * 80}>
+                <Link href={`/games/milestones?pick=${m.id}`} className={s.mapLink}>
+                  <span className={s.mapImg}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/media/${m.id}.jpg`} alt="" loading="lazy" />
+                  </span>
+                  <span className={s.mapRow}>
+                    <span className={s.mapNum}>{String(i + 1).padStart(2, "0")}</span>
+                    <span className={s.mapName}>{m.name}</span>
+                    <Arrow />
+                  </span>
+                  <span className={s.mapTag}>{m.tagline}</span>
+                </Link>
+              </Reveal>
+            ))}
           </div>
         </section>
 
+        {/* ---------------------------------------------------------------- how */}
         <section id="how" className={s.section}>
-          <div className={s.sectionHead}>
-            <h2 className={s.h2}>About</h2>
+          <Reveal className={s.sectionHead}>
+            <span className={s.index}>(02)</span>
+            <h2 className={s.h2}>
+              How a life <em>plays out</em>
+            </h2>
+          </Reveal>
+          <ol className={s.steps}>
+            {STEPS.map((st, i) => (
+              <Reveal key={st.n} as="li" className={s.step} delay={i * 90}>
+                <span className={s.stepNum}>{st.n}</span>
+                <h3>{st.title}</h3>
+                <p>{st.text}</p>
+              </Reveal>
+            ))}
+          </ol>
+        </section>
+
+        {/* ------------------------------------------------------------ friends */}
+        <section className={s.dark}>
+          <div className={s.darkInner}>
+            <Reveal className={s.darkCopy}>
+              <span className={s.index}>(03)</span>
+              <h2 className={s.h2}>
+                Bring friends.
+                <br />
+                <em>Skip the accounts.</em>
+              </h2>
+              <p>Host a game and share six digits. Friends type them in and you are playing, browser to browser. Empty seats go to the computer.</p>
+              <Link href="/games/milestones" className={`${s.cta} ${s.ctaLight}`}>
+                <span>Host a game</span>
+                <span className={s.ctaDot}>
+                  <Arrow />
+                </span>
+              </Link>
+            </Reveal>
+            <Reveal className={s.code} delay={120}>
+              <span className={s.codeLabel}>Room code</span>
+              <span className={s.digits}>
+                {"482913".split("").map((d, i) => (
+                  <span key={i} style={{ animationDelay: `${i * 90}ms` }}>
+                    {d}
+                  </span>
+                ))}
+              </span>
+              <span className={s.codeNote}>Rooms close when the host leaves. Nothing is kept.</span>
+            </Reveal>
           </div>
-          <div className={s.steps}>
-            <div className={s.step}>
-              <h3>No account</h3>
-              <p>There is nothing to sign up for and we run no server. The site is just files. Playing with friends uses a free public service only to introduce your browsers to each other.</p>
-            </div>
-            <div className={s.step}>
-              <h3>Nothing saved</h3>
-              <p>No levels, scores or history. Close the tab and the game is gone. Start a new one any time.</p>
-            </div>
-            <div className={s.step}>
-              <h3>Play anyone</h3>
-              <p>Games run in your browser against computer players, so they start straight away. Friends join with a 6 digit room code, directly browser to browser.</p>
-            </div>
-          </div>
+        </section>
+
+        {/* ------------------------------------------------------------- about */}
+        <section id="about" className={s.section}>
+          <Reveal className={s.sectionHead}>
+            <span className={s.index}>(04)</span>
+            <h2 className={s.h2}>
+              Made to be <em>forgotten</em>
+            </h2>
+            <p className={s.sectionLead}>Play when you are bored, then get on with your day. No progress to protect, nothing to come back for.</p>
+          </Reveal>
+          <ul className={s.principles}>
+            {PRINCIPLES.map((p, i) => (
+              <Reveal key={p.k} as="li" className={s.principle} delay={i * 60}>
+                <span className={s.pNum}>{String(i + 1).padStart(2, "0")}</span>
+                <span className={s.pKey}>{p.k}</span>
+                <span className={s.pVal}>{p.v}</span>
+              </Reveal>
+            ))}
+          </ul>
         </section>
       </main>
 
       <footer className={s.footer}>
-        <div className={s.footerIn}>
-          <span className={s.brand} style={{ fontSize: 16 }}>boredgames</span>
+        <div className={s.footTop}>
+          <p className={s.footLine}>
+            Bored? <Link href="/games/milestones">Spin a life</Link>.
+          </p>
+          <div className={s.footLinks}>
+            <a href="#milestones">Milestones</a>
+            <a href="#how">How it plays</a>
+            <a href="#about">About</a>
+          </div>
+        </div>
+        <div className={s.giant} aria-hidden="true">
+          idleminds
+        </div>
+        <div className={s.footBottom}>
+          <span>© {new Date().getFullYear()} idleminds</span>
           <span>Free. No account, no tracking.</span>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

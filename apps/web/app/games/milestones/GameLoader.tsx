@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 const MilestonesGame = dynamic(() => import("@/components/milestones/MilestonesGame"), {
   ssr: false,
   loading: () => (
-    <div style={{ height: "100dvh", display: "grid", placeItems: "center", background: "#dff0f1", fontFamily: "var(--font-fredoka), sans-serif", fontSize: 20 }}>
+    <div style={{ height: "100dvh", display: "grid", placeItems: "center", background: "var(--paper)", color: "var(--muted)", fontFamily: "var(--font-ui)", fontSize: 15 }}>
       Loading…
     </div>
   ),

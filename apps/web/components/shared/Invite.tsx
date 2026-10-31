@@ -129,7 +129,7 @@ export function FriendSlots({ ref, max = 3, onJoined }: { ref: Ref<SlotsHandle>;
           return f ? (
             <div key={f.id} className={r.person}>
               <span className={r.joined}>
-                {f.name} joined{f.ready ? " · car chosen" : ""}
+                {f.name} joined
               </span>
               <button type="button" className={r.link} onClick={() => f.link.close()}>
                 Remove

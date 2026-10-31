@@ -6,7 +6,7 @@ const config: NextConfig = {
   output: "export",
   reactStrictMode: true,
   // Workspace packages ship TypeScript source.
-  transpilePackages: ["@boredgames/engine", "@boredgames/milestones", "@boredgames/f1", "@boredgames/quickdraw"],
+  transpilePackages: ["@boredgames/engine", "@boredgames/milestones"],
   turbopack: { root: path.join(__dirname, "../..") },
 };
 

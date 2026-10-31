@@ -27,7 +27,7 @@ export const THEMES: Record<Theme, WorldTheme> = {
     sky: "linear-gradient(180deg, #bfe3f2 0%, #dff0f1 50%, #fbefdd 100%)",
     fog: 0xe2f0f0,
     outer: 0x9ed6e4,
-    groundTop: 0xb7de9c,
+    groundTop: 0xc6dea6,
     groundSide: 0xebd3a6,
     rim: 0xffffff,
     road: 0xf4e6c8,

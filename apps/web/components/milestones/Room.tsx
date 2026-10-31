@@ -5,6 +5,8 @@ import type { BotLevel } from "@boredgames/engine";
 import { webrtcSupported } from "@/lib/p2p";
 import { FriendSlots, type Friend, type SlotsHandle } from "../shared/Invite";
 import r from "../shared/invite.module.css";
+import { Icon } from "./Icon";
+import { Seg, Shell } from "./Lobby";
 import l from "./lobby.module.css";
 
 export type Guest = Friend;
@@ -30,78 +32,59 @@ export default function Room({
 
   if (!webrtcSupported()) {
     return (
-      <div className={l.lobby}>
-        <div className={l.inner}>
+      <Shell back={{ label: "Maps", onClick: onBack }}>
+        <main className={l.narrow}>
           <p className={r.note}>This browser can&rsquo;t connect to other players.</p>
-          <button type="button" className={r.btn} onClick={onBack}>
-            Back
-          </button>
-        </div>
-      </div>
+        </main>
+      </Shell>
     );
   }
 
   return (
-    <div className={l.lobby}>
-      <div className={l.inner}>
-        <header className={l.head}>
-          <button type="button" className={l.back} onClick={onBack}>
-            ← Back
-          </button>
-          <div className={l.titles}>
-            <h1 className={l.title}>Play with friends</h1>
-            <p className={l.tag}>{mapName.toUpperCase()}</p>
+    <Shell back={{ label: "Maps", onClick: onBack }}>
+      <main className={l.narrow}>
+        <section className={l.intro}>
+          <span className={l.eyebrow}>{mapName}</span>
+          <h1 className={l.title}>
+            Play with <em>friends</em>
+          </h1>
+          <p className={l.lead}>Share the room code. Friends open Milestones, choose &ldquo;Join with a code&rdquo; and type it. The game runs between your browsers, so keep this tab open.</p>
+          <div className={l.setup}>
+            <Seg label="Computer players" value={botCount} options={[0, 1, 2, 3].map((n) => ({ id: n, label: String(n) }))} onChange={setBots} disabled={(n) => n > maxBots} />
+            {botCount > 0 && (
+              <Seg
+                label="Computer"
+                value={level}
+                options={(["easy", "medium", "hard"] as const).map((v) => ({ id: v, label: v[0]!.toUpperCase() + v.slice(1) }))}
+                onChange={setLevel}
+              />
+            )}
           </div>
-        </header>
-
-        <p className={l.tips}>
-          Friends join with the room code. The game runs directly between your browsers, so keep this tab open while you play.
-        </p>
-
+          <div className={l.actions}>
+            <button
+              type="button"
+              className={l.play}
+              disabled={!canStart}
+              onClick={() => {
+                const taken = slots.current?.take();
+                onStart({ name: name.trim().slice(0, 14) || "Host", guests: taken?.friends ?? [], room: taken?.room ?? null, bots: botCount, level });
+              }}
+            >
+              <span>{joined ? `Start with ${joined} ${joined === 1 ? "friend" : "friends"}` : canStart ? "Start with the computer" : "Waiting for friends"}</span>
+              <span className={l.playArrow}>
+                <Icon name="arrow" size={20} />
+              </span>
+            </button>
+          </div>
+        </section>
         <section className={r.panel}>
           <label className={r.field}>
-            <span className={r.label}>YOUR NAME</span>
+            <span className={r.label}>Your name</span>
             <input className={r.input} value={name} maxLength={14} onChange={(e) => setName(e.target.value)} />
           </label>
           <FriendSlots ref={slots} onJoined={setJoined} />
         </section>
-
-        <section className={l.setup} aria-label="Computer players">
-          <div className={l.field}>
-            <span className={l.label}>COMPUTER PLAYERS</span>
-            <div className={l.seg} role="radiogroup" aria-label="Computer players">
-              {[0, 1, 2, 3].map((n) => (
-                <button key={n} type="button" role="radio" aria-checked={botCount === n} disabled={n > maxBots} className={botCount === n ? l.segOn : ""} onClick={() => setBots(n)}>
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-          {botCount > 0 && (
-            <div className={l.field}>
-              <span className={l.label}>COMPUTER SKILL</span>
-              <div className={l.seg} role="radiogroup" aria-label="Computer skill">
-                {(["easy", "medium", "hard"] as const).map((v) => (
-                  <button key={v} type="button" role="radio" aria-checked={level === v} className={level === v ? l.segOn : ""} onClick={() => setLevel(v)}>
-                    {v[0]!.toUpperCase() + v.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <button
-            type="button"
-            className={l.start}
-            disabled={!canStart}
-            onClick={() => {
-              const taken = slots.current?.take();
-              onStart({ name: name.trim().slice(0, 14) || "Host", guests: taken?.friends ?? [], room: taken?.room ?? null, bots: botCount, level });
-            }}
-          >
-            Start game
-          </button>
-        </section>
-      </div>
-    </div>
+      </main>
+    </Shell>
   );
 }

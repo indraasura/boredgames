@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { BotLevel } from "@boredgames/engine";
-import { DEFAULT_MAP, getMap } from "@boredgames/milestones";
+import { DEFAULT_MAP, MAP_LIST, getMap } from "@boredgames/milestones";
 import { audio } from "@/lib/milestones/audio";
 import { MilestonesController, type Seat } from "@/lib/milestones/controller";
 import { GuestNet, HostNet, type Net, type SeatInfo } from "@/lib/milestones/net";
 import { WorldScene, type HoverInfo } from "@/lib/milestones/scene/WorldScene";
 import { THEMES } from "@/lib/milestones/scene/themes";
-import { Players, Spinner, StatusLine, TileGuide, TileTip, TitleBlock, ToastView } from "./Hud";
-import Lobby, { type Session } from "./Lobby";
+import { Console, Players, TileGuide, TileTip, TitleBlock, ToastView, Toolbar } from "./Hud";
+import Lobby, { Shell, type Session } from "./Lobby";
 import Room, { type Guest } from "./Room";
 import { ChoiceSheet, ResultsDialog } from "./Sheets";
 import { JoinFlow } from "../shared/Invite";
@@ -17,7 +17,7 @@ import r from "../shared/invite.module.css";
 import l from "./lobby.module.css";
 import m from "./milestones.module.css";
 
-const CAR_COLORS = ["#E86F51", "#4F7CC3", "#3DA774", "#9B6BD6"];
+const CAR_COLORS = ["#E4572E", "#3F7CC6", "#4F9D69", "#7D6BD0"];
 const BOT_NAMES = ["Mira", "Otto", "Juno"];
 
 interface Match {
@@ -39,12 +39,13 @@ function soloSeats(bots: number, level: BotLevel): Seat[] {
   ];
 }
 
-/** URL options, handy for demos and tests: ?map=&bots=&skill=&seed=&fast=1. */
+/** URL options: ?pick= preselects a map in the lobby; ?map=&bots=&skill=&seed=&fast=1 jump straight into a game (demos and tests). */
 function readQuery() {
   const q = new URLSearchParams(window.location.search);
   const skill = q.get("skill");
   return {
     map: q.get("map"),
+    pick: q.get("pick"),
     bots: Math.max(1, Math.min(3, Number(q.get("bots")) || 1)),
     skill: (skill === "easy" || skill === "medium" || skill === "hard" ? skill : "hard") as BotLevel,
     seed: q.has("seed") ? Number(q.get("seed")) >>> 0 : null,
@@ -74,16 +75,15 @@ export default function MilestonesGame() {
 
   if (screen.k === "join") {
     return (
-      <div className={l.lobby}>
-        <div className={l.inner}>
-          <header className={l.head}>
-            <button type="button" className={l.back} onClick={toLobby}>
-              ← Back
-            </button>
-            <div className={l.titles}>
-              <h1 className={l.title}>Join a game</h1>
-            </div>
-          </header>
+      <Shell back={{ label: "Maps", onClick: toLobby }}>
+        <main className={l.narrow}>
+          <section className={l.intro}>
+            <span className={l.eyebrow}>Milestones</span>
+            <h1 className={l.title}>
+              Join a <em>game</em>
+            </h1>
+            <p className={l.lead}>Type the six-digit room code your friend gave you. Their game starts when they are ready.</p>
+          </section>
           <JoinFlow
             build={(link) => new GuestNet(link)}
             isStart={(msg) => msg.t === "start"}
@@ -92,8 +92,8 @@ export default function MilestonesGame() {
               if (start.t === "start") play({ map: start.map, seats: start.seats, seed: start.seed, fast: start.fast, net });
             }}
           />
-        </div>
-      </div>
+        </main>
+      </Shell>
     );
   }
 
@@ -122,7 +122,7 @@ export default function MilestonesGame() {
   if (screen.k === "lobby") {
     return (
       <Lobby
-        initialMap={DEFAULT_MAP}
+        initialMap={MAP_LIST.some((x) => x.id === query.pick) ? query.pick! : DEFAULT_MAP}
         initialBots={1}
         initialLevel="hard"
         onFriends={(map) => setScreen({ k: "room", map })}
@@ -163,6 +163,8 @@ function Game({ match, onMenu }: { match: Match; onMenu(): void }) {
   const view = useSyncExternalStore(ctl.subscribe, ctl.getSnapshot, ctl.getSnapshot);
   const prefs = useSyncExternalStore(audio.subscribe, audio.getPrefs, audio.getPrefs);
   const [overview, setOverview] = useState(false);
+  const [legend, setLegend] = useState(false);
+  const closeLegend = useCallback(() => setLegend(false), []);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const [notice, setNotice] = useState<{ text: string; leave: boolean } | null>(null);
@@ -240,23 +242,18 @@ function Game({ match, onMenu }: { match: Match; onMenu(): void }) {
     <div className={m.root} data-night={theme.night} style={{ background: theme.sky }}>
       <canvas ref={canvasRef} className={m.canvas} role="img" aria-label={`${def.name}: a road of coloured tiles with toy cars`} />
 
-      <TitleBlock
-        mapName={def.name}
+      <TitleBlock mapName={def.name} onMenu={onMenu} />
+      <Toolbar
         overview={overview}
+        legend={legend}
         prefs={prefs}
-        onToggle={() => setOverview((o) => !o)}
+        onOverview={() => setOverview((o) => !o)}
+        onLegend={() => setLegend((o) => !o)}
         onRestart={isGuest ? undefined : restart}
-        onMenu={onMenu}
       />
-      <TileGuide mapId={match.map} />
-      {/* On desktop the dock is transparent (display: contents); on phones it stacks these at the bottom. */}
-      <div className={m.dock}>
-        <Players view={view} />
-        <div className={m.centerDock}>
-          <StatusLine text={view.message} />
-        </div>
-        <Spinner view={view} canSpin={canSpin} onSpin={() => ctl.spin()} />
-      </div>
+      {legend && <TileGuide mapId={match.map} onClose={closeLegend} />}
+      <Players view={view} />
+      <Console view={view} canSpin={canSpin} onSpin={() => ctl.spin()} />
       <ToastView toast={view.toast} />
       {hover && <TileTip mapId={match.map} node={hover.node} x={hover.x} y={hover.y} />}
       <ChoiceSheet view={view} onPick={(index) => ctl.play({ type: "choose", index })} />
@@ -273,7 +270,7 @@ function Game({ match, onMenu }: { match: Match; onMenu(): void }) {
 
       {status !== "ready" && (
         <div className={m.loading}>
-          <span className={`${m.loadingPill} ${m.glass}`}>
+          <span className={`${m.loadingPill} ${m.surface}`}>
             {status === "error" ? "This browser can’t run 3D graphics (WebGL)." : "Loading…"}
           </span>
         </div>

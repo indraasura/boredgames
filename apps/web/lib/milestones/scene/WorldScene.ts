@@ -2,6 +2,13 @@ import * as THREE from "three";
 import { TILE_INFO, getBoard, getMap, type Board, type BoardNode, type Theme, type TileType } from "@boredgames/milestones";
 import { LAYOUTS, computeLayout, type Layout } from "./layout";
 import { THEMES, type WorldTheme } from "./themes";
+import { TILE_ICON, drawIcon, iconFor, type IconName } from "../icons";
+
+/** The page's own typeface, for signs drawn on canvas (falls back until it has loaded). */
+const signFont = (weight: number, px: number) => {
+  const fam = typeof document !== "undefined" ? getComputedStyle(document.documentElement).getPropertyValue("--font-inter-tight").trim() : "";
+  return `${weight} ${px}px ${fam ? `${fam}, ` : ""}system-ui, "Segoe UI", sans-serif`;
+};
 
 /**
  * The 3D world. Framework-free on purpose: React only owns the <canvas> and calls this class.
@@ -343,30 +350,25 @@ export class WorldScene {
     if (!tex) {
       const info = TILE_INFO[type];
       tex = this.canvasTexture(160, 160, (x) => {
-        x.fillStyle = "rgba(255,255,255,0.96)";
+        const ink = info.color === "#FFFFFF" ? "#1b1a17" : info.color;
+        x.fillStyle = "#fffdf8";
         x.beginPath();
-        x.arc(80, 80, 72, 0, Math.PI * 2);
+        x.arc(80, 80, 66, 0, Math.PI * 2);
         x.fill();
-        x.lineWidth = 8;
-        x.strokeStyle = info.color === "#FFFFFF" ? "#d7dee3" : info.color;
-        x.stroke();
-        x.font = "82px 'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif";
-        x.textAlign = "center";
-        x.textBaseline = "middle";
-        x.fillText(info.icon, 80, 88);
+        drawIcon(x, TILE_ICON[type], 80, 80, 88, ink, 2.3);
       });
       this.iconTex.set(type, tex);
     }
     return tex;
   }
 
-  private label(text: string, color: number, icon: string | null, pos: THREE.Vector3, scale = 6): THREE.Sprite {
+  private label(text: string, color: number, icon: IconName | null, pos: THREE.Vector3, scale = 6): THREE.Sprite {
     const tex = this.canvasTexture(512, 128, (x) => {
-      x.font = "600 50px ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif";
-      const iconW = icon ? 64 : 0;
+      x.font = signFont(600, 46);
+      const iconW = icon ? 58 : 0;
       const w = Math.min(500, x.measureText(text).width + 70 + iconW);
       const l = (512 - w) / 2;
-      x.fillStyle = "rgba(255,255,255,0.96)";
+      x.fillStyle = "#fffdf8";
       x.beginPath();
       x.moveTo(l + 48, 16);
       x.arcTo(l + w, 16, l + w, 112, 48);
@@ -375,18 +377,21 @@ export class WorldScene {
       x.arcTo(l, 16, l + w, 16, 48);
       x.closePath();
       x.fill();
-      x.lineWidth = 6;
-      x.strokeStyle = hex(color);
+      x.lineWidth = 4;
+      x.strokeStyle = "rgba(27,26,23,0.14)";
       x.stroke();
-      x.fillStyle = "#23303B";
+      x.fillStyle = "#1b1a17";
       x.textAlign = "left";
       x.textBaseline = "middle";
       if (icon) {
-        x.font = "52px 'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif";
-        x.fillText(icon, l + 26, 68);
-        x.font = "600 50px ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif";
+        x.fillStyle = hex(color);
+        x.beginPath();
+        x.arc(l + 52, 64, 28, 0, Math.PI * 2);
+        x.fill();
+        drawIcon(x, icon, l + 52, 64, 34, "#fffdf8", 2.4);
+        x.fillStyle = "#1b1a17";
       }
-      x.fillText(text, l + 34 + iconW, 68);
+      x.fillText(text, l + 38 + iconW, 66);
     });
     const material = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
     this.disposables.push(material);
@@ -552,7 +557,7 @@ export class WorldScene {
         // Stops that sit side by side stack their name tags instead of overlapping.
         const crowd = labelSpots.filter((q) => q.distanceTo(p) < 8).length;
         labelSpots.push(p);
-        this.label(n.label ?? info.name, color, info.icon, v3(p.x, 4.6 + crowd * 1.5, p.z), 5.2);
+        this.label(n.label ?? info.name, color, TILE_ICON[n.type], v3(p.x, 4.6 + crowd * 1.5, p.z), 5.2);
       } else {
         this.mesh(rimGeo, this.theme.rim, 0, 0.13, 0, group);
         top = this.mesh(tileGeo, this.mat(color, glow), 0, 0.25, 0, group);
@@ -581,8 +586,8 @@ export class WorldScene {
       const branch = def.branches[info.id];
       const path = def.paths.find((x) => x.segment === info.id);
       const name = branch?.name ?? path?.name ?? info.name;
-      const color = branch ? (branch.vibe === "risky" ? 0xff7a00 : 0x2fbf71) : 0x8b5a2b;
-      this.label(name, color, branch ? (branch.vibe === "risky" ? "⚡" : "🛣️") : (path?.icon ?? null), v3(p.x, 3.3, p.z), 5.4);
+      const color = branch ? (branch.vibe === "risky" ? 0x2a9d8f : 0x4f9d69) : 0xa0703c;
+      this.label(name, color, branch ? (branch.vibe === "risky" ? "bolt" : "road") : iconFor(path?.icon), v3(p.x, 3.3, p.z), 5.4);
     }
 
     // Start arch.
@@ -593,7 +598,7 @@ export class WorldScene {
     for (const d of [-2.4, 2.4]) this.mesh(postGeo, 0xffffff, sp.x + side.x * d, 1.8, sp.z + side.z * d);
     const bar = this.mesh(this.geo(new THREE.BoxGeometry(5.4, 0.7, 0.3)), 0xe86f51, sp.x, 3.5, sp.z);
     bar.rotation.y = Math.atan2(side.x, side.z) + Math.PI / 2;
-    this.label("Start", 0xe86f51, "🚩", v3(sp.x, 4.9, sp.z));
+    this.label("Start", 0xe4572e, "flag", v3(sp.x, 4.9, sp.z));
 
     // Hover ring.
     this.hoverRing = new THREE.Mesh(

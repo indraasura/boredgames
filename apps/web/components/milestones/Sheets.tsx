@@ -3,15 +3,18 @@
 import { useEffect } from "react";
 import { RULES, TILE_INFO, getBoard, type ChoiceKind, type MilestonesState, type Option, type TileType } from "@boredgames/milestones";
 import { money, type ViewState } from "@/lib/milestones/controller";
+import { iconFor, type IconName } from "@/lib/milestones/icons";
+import { TileDot } from "./Hud";
+import { Icon } from "./Icon";
 import s from "./milestones.module.css";
 
 const KICKER: Record<ChoiceKind, string> = {
-  route: "OPENING ROAD",
-  branch: "CROSSROADS",
-  job: "JOB",
-  home: "HOME",
-  invest: "MARKET",
-  lawsuit: "LAWSUIT",
+  route: "Opening road",
+  branch: "Crossroads",
+  job: "Job board",
+  home: "Home",
+  invest: "Market",
+  lawsuit: "Lawsuit",
 };
 
 const TIER_NAME = {
@@ -38,12 +41,11 @@ function Mix({ mapId, segment }: { mapId: string; segment: string }) {
   const items = mix(mapId, segment);
   const total = getBoard(mapId).segments[segment]?.length ?? 0;
   return (
-    <span className={s.mix} aria-label={`${total} tiles`}>
+    <span className={s.mix}>
       <span className={s.mixTotal}>{total} tiles</span>
       {items.map(({ type, n }) => (
         <span key={type} className={s.mixItem} title={`${n} × ${TILE_INFO[type].name}`}>
-          <span className={s.mixDot} style={{ background: TILE_INFO[type].color }} />
-          {TILE_INFO[type].icon}
+          <TileDot type={type} size={18} />
           {n}
         </span>
       ))}
@@ -52,10 +54,10 @@ function Mix({ mapId, segment }: { mapId: string; segment: string }) {
 }
 
 interface Card {
-  icon?: string;
+  icon: IconName;
   label: string;
   detail: string;
-  meta?: string;
+  facts?: [string, string][];
   color: string;
   extra?: React.ReactNode;
 }
@@ -64,77 +66,56 @@ function describe(o: Option, g: MilestonesState): Card {
   const p = g.players[g.turn]!;
   switch (o.type) {
     case "route": {
-      const bits = [];
-      if (o.path.loan) bits.push(`LOAN ${money(o.path.loan)}`);
-      if (o.path.cash) bits.push(`+${money(o.path.cash)} CASH`);
-      return {
-        icon: o.path.icon,
-        label: o.path.name,
-        detail: `${o.path.blurb} Leads to ${TIER_NAME[o.path.tier]}.`,
-        meta: bits.join(" · ") || undefined,
-        color: o.path.loan ? "#8E7CC3" : "#7BC47F",
-        extra: <Mix mapId={g.map} segment={o.path.segment} />,
-      };
+      const facts: [string, string][] = [];
+      if (o.path.loan) facts.push(["Loan", money(o.path.loan)]);
+      if (o.path.cash) facts.push(["Cash", `+${money(o.path.cash)}`]);
+      facts.push(["Leads to", TIER_NAME[o.path.tier]]);
+      return { icon: iconFor(o.path.icon), label: o.path.name, detail: o.path.blurb, facts, color: o.path.loan ? "#7d6bd0" : "#4f9d69", extra: <Mix mapId={g.map} segment={o.path.segment} /> };
     }
     case "branch": {
       const road = getBoard(g.map).nodes[o.node]!.segment;
       return {
-        icon: o.vibe === "risky" ? "📈" : "💰",
+        icon: o.vibe === "risky" ? "bolt" : "road",
         label: o.name,
         detail: o.blurb,
-        meta: o.vibe === "risky" ? "MORE MARKET STOPS" : "MORE PAYDAYS",
-        color: o.vibe === "risky" ? "#00A6A6" : "#2FBF71",
+        facts: [["Expect", o.vibe === "risky" ? "more market stops" : "more paydays"]],
+        color: o.vibe === "risky" ? "#2a9d8f" : "#4f9d69",
         extra: <Mix mapId={g.map} segment={road} />,
       };
     }
     case "job":
       return {
+        icon: "briefcase",
         label: o.title,
-        detail: o.perk ? `Includes a ${money(o.perk)} bonus in your Growth Fund.` : "Steady work.",
-        meta: `${money(o.salary)} PER PAYDAY`,
-        color: "#7BC47F",
-        icon: "💼",
+        detail: o.perk ? `Comes with a ${money(o.perk)} bonus in your Growth Fund.` : "Steady work.",
+        facts: [["Pay", `${money(o.salary)} a payday`]],
+        color: "#4f9d69",
       };
     case "home": {
       const borrow = Math.max(0, o.home.price - p.cash);
-      return {
-        icon: "🏠",
-        label: o.home.name,
-        detail: `Gains value every round (${o.home.growth >= 1.2 ? "fast" : o.home.growth >= 0.9 ? "steady" : "slow"}). Sold when you retire.`,
-        meta: `PRICE ${money(o.home.price)}${borrow ? ` · BORROWS ${money(Math.ceil(borrow / RULES.loanChunk) * RULES.loanChunk)}` : ""}`,
-        color: "#1E88E5",
-      };
+      const facts: [string, string][] = [["Price", money(o.home.price)]];
+      if (borrow) facts.push(["Borrows", money(Math.ceil(borrow / RULES.loanChunk) * RULES.loanChunk)]);
+      facts.push(["Value grows", o.home.growth >= 1.2 ? "fast" : o.home.growth >= 0.9 ? "steadily" : "slowly"]);
+      return { icon: "house", label: o.home.name, detail: "Sold when you retire, for whatever it is worth by then.", facts, color: "#3f7cc6" };
     }
     case "rent":
-      return { icon: "🧳", label: "Skip", detail: "Keep your cash.", meta: "$0", color: "#8A94A6" };
+      return { icon: "suitcase", label: "Skip it", detail: "Keep your cash for now.", color: "#77726a" };
     case "invest":
       return {
-        icon: "📈",
+        icon: "trend",
         label: `Invest ${money(o.amount)}`,
-        detail: `Rises and falls with the market: +10% in a boom, −8% in a slump. Averages about 4% a round.`,
-        meta: "PAID OUT AT THE END",
-        color: "#00A6A6",
+        detail: "Moves with the market: +10% in a boom, −8% in a slump, about +4% on average.",
+        facts: [["Paid out", "when you retire"]],
+        color: "#2a9d8f",
       };
     case "insure":
-      return {
-        icon: "🛡️",
-        label: "Buy insurance",
-        detail: "Blocks your next lawsuit, layoff, tax audit or disaster. One use.",
-        meta: `COSTS ${money(o.cost)}`,
-        color: "#6C8EBF",
-      };
+      return { icon: "shield", label: "Buy insurance", detail: "Blocks your next lawsuit, layoff, tax audit or disaster. One use.", facts: [["Costs", money(o.cost)]], color: "#3f7cc6" };
     case "settle":
-      return { icon: "🤝", label: "Settle", detail: "Pay up and make it go away.", meta: `PAY ${money(o.amount)}`, color: "#8A94A6" };
+      return { icon: "handshake", label: "Settle", detail: "Pay up and make it go away.", facts: [["You pay", money(o.amount)]], color: "#77726a" };
     case "fight":
-      return {
-        icon: "⚖️",
-        label: "Fight it in court",
-        detail: `A coin flip. Win and you pay nothing. Lose and it costs double.`,
-        meta: `50%: $0 · 50%: ${money(o.lose)}`,
-        color: "#E5383B",
-      };
+      return { icon: "scales", label: "Fight it in court", detail: "A coin flip. Win and you pay nothing; lose and it costs double.", facts: [["Win", "$0"], ["Lose", money(o.lose)]], color: "#e4572e" };
     case "skip":
-      return { icon: "✋", label: o.label, detail: o.detail, color: "#C9CFD4" };
+      return { icon: "hand", label: o.label, detail: o.detail, color: "#77726a" };
   }
 }
 
@@ -159,38 +140,47 @@ export function ChoiceSheet({ view, onPick }: { view: ViewState; onPick(index: n
 
   return (
     <div className={s.scrim}>
-      <div role="dialog" aria-modal="true" aria-labelledby="choice-title" className={`${s.sheet} ${s.glass}`}>
-        <div>
-          <span className={s.toastKicker}>{KICKER[choice.kind]}</span>
-          <h2 id="choice-title" className={s.sheetTitle}>
-            {choice.title}
-          </h2>
-          <p className={s.sheetSub}>{choice.text}</p>
-        </div>
+      <div role="dialog" aria-modal="true" aria-labelledby="choice-title" className={s.sheet}>
+        <header className={s.sheetHead}>
+          <span className={s.kickerAccent}>{KICKER[choice.kind]}</span>
+          <h2 id="choice-title">{choice.title}</h2>
+          <p>{choice.text}</p>
+          {choice.kind === "invest" && (
+            <p className={s.sheetNums}>
+              <span>
+                Cash <b>{money(p.cash)}</b>
+              </span>
+              <span>
+                Growth Fund <b>{money(Math.round(p.fund))}</b>
+              </span>
+            </p>
+          )}
+        </header>
 
-        {choice.kind === "invest" && (
-          <div className={s.investBar}>
-            <span className={s.chip}>Cash {money(p.cash)}</span>
-            <span className={s.chip}>Fund {money(Math.round(p.fund))}</span>
-          </div>
-        )}
-
-        <div className={s.options}>
+        <div className={s.options} data-count={choice.options.length}>
           {choice.options.map((o, i) => {
             const c = describe(o, game);
             return (
-              <button key={i} type="button" className={s.opt} onClick={() => onPick(i)} style={{ ["--accent" as string]: c.color }}>
-                <span className={s.optBar} style={{ background: c.color }} />
+              <button key={i} type="button" className={s.opt} onClick={() => onPick(i)} style={{ ["--c" as string]: c.color, animationDelay: `${i * 50}ms` }}>
                 <span className={s.optTop}>
-                  {c.icon && <span className={s.optIcon}>{c.icon}</span>}
-                  <span className={s.optLabel}>{c.label}</span>
-                  <span className={s.optKey} aria-hidden="true">
-                    {i + 1}
+                  <span className={s.optIcon}>
+                    <Icon name={c.icon} size={22} />
                   </span>
+                  <kbd className={s.optKey}>{i + 1}</kbd>
                 </span>
+                <span className={s.optLabel}>{c.label}</span>
                 <span className={s.optDetail}>{c.detail}</span>
                 {c.extra}
-                {c.meta && <span className={s.optMeta}>{c.meta}</span>}
+                {c.facts && (
+                  <span className={s.facts}>
+                    {c.facts.map(([k, v]) => (
+                      <span key={k}>
+                        <span>{k}</span>
+                        <b>{v}</b>
+                      </span>
+                    ))}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -207,46 +197,49 @@ export function ResultsDialog({ view, onAgain, onMenu }: { view: ViewState; onAg
   if (!results) return null;
   const winner = results[0]!;
   const tie = results[1] && results[1].net === winner.net;
-  const title = tie ? "It’s a tie." : winner.seat.id === view.localId ? "You win." : `${winner.seat.name} wins.`;
+  const title = tie ? "A tie." : winner.seat.id === view.localId ? "You win." : `${winner.seat.name} wins.`;
 
   return (
-    <div className={s.scrim} style={{ background: "rgba(35,48,59,.28)" }}>
-      <div role="dialog" aria-modal="true" aria-labelledby="results-title" className={s.results}>
-        <span className={s.toastKicker}>GAME OVER</span>
-        <h2 id="results-title" className={s.resultsTitle}>
-          {title}
-        </h2>
-        {results.map(({ seat, player, net, rank, portfolio }) => {
-          const parts = [`cash ${money(player.cash)}`];
-          if (player.homeSale) parts.push(`home ${money(player.homeSale)}`);
-          if (portfolio) parts.push(`Growth Fund ${money(portfolio)}`);
-          if (player.kids) parts.push(`kids +${money(player.kids * RULES.kidValue)}`);
-          if (player.retiredFirst) parts.push(`first to retire +${money(RULES.retireFirstBonus)}`);
-          if (player.loans) parts.push(`loans −${money(Math.round(player.loans * RULES.loanInterest))}`);
-          return (
-            <div key={seat.id} className={s.resultRow}>
-              <div>
-                <span className={s.resultName}>
-                  <span className={s.rank}>{rank}</span>
-                  <span className={s.swatch} style={{ background: seat.color }} />
-                  {seat.id === view.localId ? "You" : seat.name}
+    <div className={s.scrim}>
+      <div role="dialog" aria-modal="true" aria-labelledby="results-title" className={`${s.sheet} ${s.results}`}>
+        <header className={s.sheetHead}>
+          <span className={s.kickerAccent}>Everyone has retired</span>
+          <h2 id="results-title">{title}</h2>
+          <p>Net worth at the end: cash, the home sold, the Growth Fund and family, less loans.</p>
+        </header>
+        <ol className={s.ranking}>
+          {results.map(({ seat, player, net, rank, portfolio }) => {
+            const parts = [`cash ${money(player.cash)}`];
+            if (player.homeSale) parts.push(`home ${money(player.homeSale)}`);
+            if (portfolio) parts.push(`fund ${money(portfolio)}`);
+            if (player.kids) parts.push(`kids +${money(player.kids * RULES.kidValue)}`);
+            if (player.retiredFirst) parts.push(`first to retire +${money(RULES.retireFirstBonus)}`);
+            if (player.loans) parts.push(`loans −${money(Math.round(player.loans * RULES.loanInterest))}`);
+            return (
+              <li key={seat.id} className={rank === 1 ? s.first : ""}>
+                <span className={s.rank}>{String(rank).padStart(2, "0")}</span>
+                <span className={s.rankWho}>
+                  <b>
+                    <i style={{ background: seat.color }} />
+                    {seat.id === view.localId ? "You" : seat.name}
+                  </b>
+                  <span>{parts.join(" · ")}</span>
                 </span>
-                <span className={s.resultLines}>{parts.join(" · ")}</span>
-              </div>
-              <span className={s.resultNet}>{money(net)}</span>
-            </div>
-          );
-        })}
-
+                <span className={s.rankNet}>{money(net)}</span>
+              </li>
+            );
+          })}
+        </ol>
         <div className={s.resultActions}>
           {onAgain ? (
-            <button type="button" className={s.spinBtn} onClick={onAgain}>
+            <button type="button" className={s.primary} onClick={onAgain}>
               Play again
+              <Icon name="arrow" size={18} />
             </button>
           ) : (
-            <span className={s.resultLines}>The host can start another game.</span>
+            <span className={s.muted}>The host can start another game.</span>
           )}
-          <button type="button" className={`${s.pillBtn} ${s.outline}`} onClick={onMenu}>
+          <button type="button" className={s.secondary} onClick={onMenu}>
             Change map
           </button>
         </div>

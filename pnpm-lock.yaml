@@ -20,15 +20,9 @@ importers:
       '@boredgames/engine':
         specifier: workspace:*
         version: link:../../packages/engine
-      '@boredgames/f1':
-        specifier: workspace:*
-        version: link:../../packages/f1
       '@boredgames/milestones':
         specifier: workspace:*
         version: link:../../packages/milestones
-      '@boredgames/quickdraw':
-        specifier: workspace:*
-        version: link:../../packages/quickdraw
       next:
         specifier: ^16.4.2
         version: 16.4.2(@types/node@26.6.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -63,19 +57,7 @@ importers:
 
   packages/engine: {}
 
-  packages/f1:
-    dependencies:
-      '@boredgames/engine':
-        specifier: workspace:*
-        version: link:../engine
-
   packages/milestones:
-    dependencies:
-      '@boredgames/engine':
-        specifier: workspace:*
-        version: link:../engine
-
-  packages/quickdraw:
     dependencies:
       '@boredgames/engine':
         specifier: workspace:*
