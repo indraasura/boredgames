@@ -1,0 +1,153 @@
+.canvasWrap {
+  position: absolute;
+  inset: 0;
+}
+.canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  outline: none;
+}
+
+.hud {
+  position: absolute;
+  z-index: 10;
+  top: 68px;
+  right: var(--gutter);
+  width: 272px;
+  max-height: calc(100dvh - 84px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+.hud > * {
+  pointer-events: auto;
+}
+
+.turn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.turn strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+}
+.dot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid;
+}
+.check {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--tomato);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.boards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.boardRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.boardRow small {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #a9a3c4;
+}
+
+.logPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  max-height: 22dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 13px;
+}
+.log li {
+  display: flex;
+  gap: 10px;
+}
+.log li span {
+  width: 22px;
+  color: #6f6a92;
+  text-align: right;
+}
+.log .empty {
+  font-family: var(--font-arcade);
+  color: #a9a3c4;
+  line-height: 1.4;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rules {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #d9d4ee;
+}
+
+@media (max-width: 760px) {
+  .hud {
+    top: auto;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: 46dvh;
+    overflow-y: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+  .hud > * {
+    flex: 1 1 100%;
+  }
+  .logPanel {
+    display: none;
+  }
+  .boards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+  .boards > p {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+}

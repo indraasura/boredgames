@@ -26,3 +26,7 @@ Milestones: the host runs the computer players and relays moves; every browser a
 ## Games
 
 - **Milestones** (done): spin, drive a 3D map, a few choices, retire richest. 4 maps, 3 bot skill levels, synthesised sound.
+- **Tri-D Chess** (done): `packages/tridchess`. Computer at 3 levels, same screen, or a friend by room code.
+- **Bot Brawl** (done): `packages/botbrawl`. Timed robot builder, cage fight, computer, same keyboard or a friend (host runs the sim, guest renders snapshots).
+- **Last Round** (done): `packages/boxing`. First-person boxing against the computer. Friend duels are not built.
+- **Next on the shelf:** Four in a Row, Reversi, Ludo, Liar's Dice, Imposter, Dots and Boxes.

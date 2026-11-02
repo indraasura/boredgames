@@ -17,6 +17,20 @@
   --sea: #3f7cc6;
   --blush: #ef9fb4;
 
+  /* the arcade: saturated colours on a night-blue base, used by the shelf and the new games */
+  --night: #12101f;
+  --night-2: #1b1830;
+  --night-3: #272342;
+  --cobalt: #2f35e8;
+  --cream: #f7f0de;
+  --tomato: #ff5a36;
+  --lemon: #ffd23f;
+  --mint: #3ddc97;
+  --sky: #4cc9f0;
+  --grape: #9b7bff;
+  --pink: #ff8fc2;
+  --font-arcade: var(--font-bricolage), var(--font-inter-tight), system-ui, sans-serif;
+
   --font-ui: var(--font-inter-tight), var(--font-inter), system-ui, sans-serif;
   --font-text: var(--font-inter), system-ui, sans-serif;
   --font-display: var(--font-serif), "Times New Roman", serif;
@@ -83,4 +97,23 @@ button {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* A dark page that reuses the older shared components (room codes, joining): the paper tokens are flipped inside it. */
+.arcade {
+  --paper: var(--night);
+  --paper-2: var(--night-3);
+  --surface: var(--night-2);
+  --ink: var(--cream);
+  --ink-2: #d9d2bd;
+  --muted: #a9a3c4;
+  --line: rgba(247, 240, 222, 0.14);
+  --line-strong: rgba(247, 240, 222, 0.28);
+  --accent-ink: #ff8c6e;
+  --leaf: var(--mint);
+  --font-ui: var(--font-arcade);
+  --font-text: var(--font-arcade);
+  --font-display: var(--font-arcade);
+  background: var(--night);
+  color: var(--cream);
 }
