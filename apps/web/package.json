@@ -11,6 +11,9 @@
   "dependencies": {
     "@boredgames/engine": "workspace:*",
     "@boredgames/milestones": "workspace:*",
+    "@boredgames/tridchess": "workspace:*",
+    "@boredgames/botbrawl": "workspace:*",
+    "@boredgames/boxing": "workspace:*",
     "next": "^16.4.2",
     "peerjs": "^1.5.5",
     "react": "^19.3.1",

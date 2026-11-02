@@ -17,12 +17,21 @@ importers:
 
   apps/web:
     dependencies:
+      '@boredgames/botbrawl':
+        specifier: workspace:*
+        version: link:../../packages/botbrawl
+      '@boredgames/boxing':
+        specifier: workspace:*
+        version: link:../../packages/boxing
       '@boredgames/engine':
         specifier: workspace:*
         version: link:../../packages/engine
       '@boredgames/milestones':
         specifier: workspace:*
         version: link:../../packages/milestones
+      '@boredgames/tridchess':
+        specifier: workspace:*
+        version: link:../../packages/tridchess
       next:
         specifier: ^16.4.2
         version: 16.4.2(@types/node@26.6.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -55,9 +64,27 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/botbrawl:
+    dependencies:
+      '@boredgames/engine':
+        specifier: workspace:*
+        version: link:../engine
+
+  packages/boxing:
+    dependencies:
+      '@boredgames/engine':
+        specifier: workspace:*
+        version: link:../engine
+
   packages/engine: {}
 
   packages/milestones:
+    dependencies:
+      '@boredgames/engine':
+        specifier: workspace:*
+        version: link:../engine
+
+  packages/tridchess:
     dependencies:
       '@boredgames/engine':
         specifier: workspace:*
